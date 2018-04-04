@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delhivery渠道自派送单号管理</title>
+    <script></script>
+</head>
+<body>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $.ajax({
+            url: "/selfDispatch/getAll",
+            success: function (data) {
+                window.all="";
+                for (var i=0;i<data.length;i++){
+                    all=all+data[i]+"\r\n";
+                }
+                console.log(all);
+                $("#list").val(all);
+                console.log(JSON.stringify($("#list").val()));
+            }
+        });
+        $("#submit").click(function () {
+            var arr=$("#list").val().split("\n");
+            console.log(arr);
+            $.ajax({
+                type:"POST",
+                url:"/selfDispatch/setAll",
+                data:JSON.stringify(arr),
+                contentType : "application/json",
+                success:function () {
+                    alert("提交成功！")
+                },
+                error:function () {
+                    alert("提交失败！")
+                }
+
+            })
+        })
+    });
+
+</script>
+
+<textarea id="list" rows="50" cols="50">
+
+</textarea>
+
+<button id="submit">提交</button>
+
+</body>
+</html>
