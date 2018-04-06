@@ -14,11 +14,12 @@ import java.util.stream.Collectors;
 @Document
 public class OverOrderBill implements Serializable {
 
-    @Id
+
     private ObjectId _id;
     //归档时间
     private Date archiveTime;
     //以下都是TrackOrderDocument的属性
+    @Id
     private String number;
     private String origin;
     private String destination;

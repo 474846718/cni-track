@@ -57,6 +57,7 @@ public class DomainConfiguration {
         orderTracker.setClient(okHttpClient());
         orderTracker.setOrderBillDao(orderBillDao);
         orderTracker.setRedisTemplate(redisTemplate);
+        orderTracker.setMatchers(matchers());
         return orderTracker;
     }
 

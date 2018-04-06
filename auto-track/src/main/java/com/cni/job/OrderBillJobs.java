@@ -2,7 +2,7 @@ package com.cni.job;
 
 
 import com.cni.dao.OrderBillDao;
-import com.cni.dao.OverOrderBillDao;
+import com.cni.dao.repository.OverOrderBillRepository;
 import com.cni.dao.entity.OrderBill;
 import com.cni.dao.entity.OverOrderBill;
 import com.cni.httptrack.OrderTracker;
@@ -11,13 +11,11 @@ import com.cni.matcher.Matchers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.stream.Collectors;
 
+//TODO @org.springframework.scheduling.annotation.Scheduled 改写
 /**
  * 任务类
  * 的方法和调度器绑定
@@ -28,7 +26,7 @@ public class OrderBillJobs {
     private static final Logger logger = LoggerFactory.getLogger(OrderBillJobs.class);
 
     private OrderBillDao orderBillDao;
-    private OverOrderBillDao overOrderBillDao;
+    private OverOrderBillRepository overOrderBillDao;
     private OrderTracker orderTracker;
     private Matchers matchers;
 
@@ -48,11 +46,11 @@ public class OrderBillJobs {
         this.orderBillDao = orderBillDao;
     }
 
-    public OverOrderBillDao getOverOrderBillDao() {
+    public OverOrderBillRepository getOverOrderBillDao() {
         return overOrderBillDao;
     }
 
-    public void setOverOrderBillDao(OverOrderBillDao overOrderBillDao) {
+    public void setOverOrderBillDao(OverOrderBillRepository overOrderBillDao) {
         this.overOrderBillDao = overOrderBillDao;
     }
 
@@ -70,9 +68,11 @@ public class OrderBillJobs {
      * 并且转存到归档表
      */
     public synchronized void restoreOverOrders() {
-        List<OrderBill> overOrderBill = orderBillDao.findAndRemoveAccomplishOrder();
-        System.out.println("活跃表将要归档的长度" + overOrderBill.size());
-        overOrderBillDao.insert(overOrderBill.stream().map(OverOrderBill::new).collect(Collectors.toList()));
+        List<OrderBill> overOrderBills = orderBillDao.findOverOrderBill();
+        System.out.println("活跃表将要归档的长度" + overOrderBills.size());
+        overOrderBillDao.insert(overOrderBills.stream().map(OverOrderBill::new).collect(Collectors.toList())); //TODO 检查是否重复插入
+        List<String> nums =overOrderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+        orderBillDao.removeOverOrderBill(nums);
     }
 
     /**
@@ -80,12 +80,11 @@ public class OrderBillJobs {
      * 并且取消追踪
      */
     public synchronized void checkExpiredOrders() {
-        List<String> expired = orderBillDao.findLongTimeNoUpdateOrder();
+        List<String> expired = orderBillDao.findExpiredOrderBill();
         logger.warn("获取长时间无更新的订单" + expired.size());
     }
 
-    //TODO 后期优化不通过正则匹配识别渠道 通过数据库标记
-
+    //TODO 不通过正则匹配识别渠道 通过数据库标记
     /**
      * 追踪活跃表的运单
      */

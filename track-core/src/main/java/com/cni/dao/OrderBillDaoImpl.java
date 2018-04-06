@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 public class OrderBillDaoImpl implements OrderBillDao {
 
     private int pageContentSize = 1000;
-    private int accomplishOver = 30;
-    private int longTimeNoUpdateOver = 5;
+    private int accomplishOver = 30;    //完结状态天数
+    private int longTimeNoUpdateOver = 5;  //长时间无更新天数
     private final MongoTemplate mongoTemplate;
     private static final Object[] ACCOMPLISH_STATE = new String[]{"Lost", "Delivered", "Returned Delivered"};
 
@@ -32,13 +32,23 @@ public class OrderBillDaoImpl implements OrderBillDao {
         this.mongoTemplate = mongoTemplate;
     }
 
+    /**
+     * 更新或者插入一条运单记录
+     *
+     * @param orderBill 运单数据
+     */
     @Override
-    public void upsert(OrderBill document) {
-        Query query = new Query(Criteria.where("_id").is(document.getNumber()));
-        Update update = Update.fromDBObject(BasicDBObject.parse(JSON.toJSONString(document)));
+    public void upsert(OrderBill orderBill) {
+        Query query = new Query(Criteria.where("_id").is(orderBill.getNumber()));
+        Update update = Update.fromDBObject(BasicDBObject.parse(JSON.toJSONString(orderBill)));
         mongoTemplate.upsert(query, update, OrderBill.class);
     }
 
+    /**
+     * 获取所有运单号
+     *
+     * @return
+     */
     @Override
     public List<String> findAllNumber() {
         BasicDBObject fieldsObject = new BasicDBObject();
@@ -51,17 +61,29 @@ public class OrderBillDaoImpl implements OrderBillDao {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 通过单号获取第一个节点时间
+     *
+     * @param nums
+     * @return
+     */
     @Override
-    public List<OrderBill> findFirstScnasDateByNumbers(String... nums) {
+    public List<OrderBill> findFirstScansDateByNumbers(List<String> nums) {
         BasicDBObject fieldsObject = new BasicDBObject();
         fieldsObject.put("scans.date", true);
         BasicQuery basicQuery = new BasicQuery(new BasicDBObject(), fieldsObject);
-        basicQuery.addCriteria(Criteria.where("_id").in((Object[]) nums));
+        basicQuery.addCriteria(Criteria.where("_id").in(nums));
         return mongoTemplate.find(basicQuery, OrderBill.class);
     }
 
+
+    /**
+     * 找出所有超过 完结状态的
+     *
+     * @return
+     */
     @Override
-    public List<OrderBill> findAndRemoveAccomplishOrder() {
+    public List<OrderBill> findOverOrderBill() {
         LocalDateTime deadLine = LocalDateTime.now().plusDays(-accomplishOver);
         Long longTimeStamp = deadLine.atZone(ZoneId.systemDefault())
                 .toInstant()
@@ -89,8 +111,22 @@ public class OrderBillDaoImpl implements OrderBillDao {
         return documents;
     }
 
+    /**
+     * 删除完结状态的运单
+     */
     @Override
-    public List<String> findLongTimeNoUpdateOrder() {
+    public void removeOverOrderBill(List<String> nums) {
+        Query query = new Query();
+        mongoTemplate.remove(query, OrderBill.class);
+    }
+
+
+    /**
+     * 查找所有长时间无更新单号
+     * @return
+     */
+    @Override
+    public List<String> findExpiredOrderBill() {
         LocalDateTime deadLine = LocalDateTime.now().plusDays(-longTimeNoUpdateOver);
         Long longTimeStamp = deadLine.atZone(ZoneId.systemDefault())
                 .toInstant()
