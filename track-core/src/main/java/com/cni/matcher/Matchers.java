@@ -2,10 +2,9 @@ package com.cni.matcher;
 
 
 import com.cni.httptrack.TrackChannel;
+import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -26,6 +25,16 @@ public class Matchers {
         return channels.stream()
                 .filter(channel -> channel.getOrderNumMatcher().match(orderNum))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 通过标记获取追踪渠道
+     * @param tag 标记
+     * @return 追踪渠道
+     */
+    public TrackChannel getTrackChannel(String tag){
+        Optional<TrackChannel> trackChannel= channels.stream().filter(channel -> tag.equals(channel.getTag())).findFirst();
+        return trackChannel.orElse(null);
     }
 
     /**

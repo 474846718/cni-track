@@ -6,16 +6,12 @@ import com.cni.dao.OverOrderBillDao;
 import com.cni.dao.entity.OrderBill;
 import com.cni.dao.entity.OverOrderBill;
 import com.cni.httptrack.OrderTracker;
-import com.cni.httptrack.TrackChannel;
 import com.cni.matcher.Matchers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -70,9 +66,11 @@ public class OrderBillJobs {
      * 并且转存到归档表
      */
     public synchronized void restoreOverOrders() {
-        List<OrderBill> overOrderBill = orderBillDao.findAndRemoveAccomplishOrder();
-        System.out.println("活跃表将要归档的长度" + overOrderBill.size());
-        overOrderBillDao.insert(overOrderBill.stream().map(OverOrderBill::new).collect(Collectors.toList()));
+        List<OrderBill> restoreOrderBills = orderBillDao.findOverOrderBill();
+        System.out.println("活跃表将要归档的文档长度" + restoreOrderBills.size());
+        List<OverOrderBill> overOrderBills = restoreOrderBills.stream().map(OverOrderBill::new).collect(Collectors.toList());
+        overOrderBillDao.insert(overOrderBills);
+        orderBillDao.removeOrderBill(restoreOrderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList()));
     }
 
     /**
@@ -80,22 +78,22 @@ public class OrderBillJobs {
      * 并且取消追踪
      */
     public synchronized void checkExpiredOrders() {
-        List<String> expired = orderBillDao.findLongTimeNoUpdateOrder();
+        List<String> expired = orderBillDao.findExpirdOrderBill();
+        expired.forEach(logger::warn);
         logger.warn("获取长时间无更新的订单" + expired.size());
     }
 
-    //TODO 后期优化不通过正则匹配识别渠道 通过数据库标记
 
     /**
      * 追踪活跃表的运单
      */
     public synchronized void autoTrackOrders() {
-        List<String> onTrackNums = orderBillDao.findAllNumber();
-        ArrayBlockingQueue<OrderBill> queue = new ArrayBlockingQueue<>(onTrackNums.size());
-        for (String num : onTrackNums) {
-            List<TrackChannel> channels = matchers.matchOrderNumber(num);
-            TrackChannel channel = channels.get(0);
-            orderTracker.startTrack(num, queue, channel);
-        }
+        List<OrderBill> onTrackNums = orderBillDao.findAllNumberAndTailCompany();  //获取实体对象
+        Map<String, List<OrderBill>> groupByTailComp = onTrackNums.stream().collect(Collectors.groupingBy(OrderBill::getTailCompany)); //按照标记分组
+        Matchers matchers = orderTracker.getMatchers();
+        groupByTailComp.forEach((key, value) -> {
+            List<String> orderNums = value.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+            orderTracker.startTrack(orderNums, matchers.getTrackChannel(key));  //传入 entry kv
+        });
     }
 }

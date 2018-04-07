@@ -12,9 +12,9 @@ public interface OrderBillDao{
 
     /**
      * 尝试插入或者更新
-     * @param document
+     * @param orderBill
      */
-    void upsert(OrderBill document);
+    void upsert(OrderBill orderBill);
 
     /**
      * 获取所有单号
@@ -22,18 +22,24 @@ public interface OrderBillDao{
      */
     List<String> findAllNumber();
 
+    List<OrderBill> findAllNumberAndTailCompany();
     /**
      * 通过单号
      */
-    List<OrderBill> findFirstScnasDateByNumbers(String... nums);
+    List<OrderBill> findFirstScnasDateByNumbers(List<String> orderNums);
 
     /**
      * 查询完结状态订单
      */
-    List<OrderBill> findAndRemoveAccomplishOrder();
+    List<OrderBill> findOverOrderBill();
+
+    /**
+     *
+     */
+    void removeOrderBill(List<String> orderNums);
 
     /**
      * 返回长时间没有更新的单号
      */
-    List<String> findLongTimeNoUpdateOrder();
+    List<String> findExpirdOrderBill();
 }

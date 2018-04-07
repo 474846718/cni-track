@@ -83,6 +83,7 @@ public class QuartzConfiguration implements ApplicationContextAware {
         SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
         factoryBean.setJobDetail(checkExpiredOrders);
         factoryBean.setRepeatInterval(1000L * 60 * 60 * 24); //毫秒
+        factoryBean.setPriority(1);
         return factoryBean;
     }
 
@@ -91,6 +92,8 @@ public class QuartzConfiguration implements ApplicationContextAware {
         SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
         factoryBean.setJobDetail(restoreOverOrders);
         factoryBean.setRepeatInterval(1000L * 60 * 60 * 24); //毫秒a
+        factoryBean.setStartDelay(1000L*5);
+        factoryBean.setPriority(1);
         return factoryBean;
     }
 
@@ -99,6 +102,8 @@ public class QuartzConfiguration implements ApplicationContextAware {
 //        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
 //        factoryBean.setJobDetail(autoTrackOrders);
 //        factoryBean.setRepeatInterval(1000L * 60 * 60); //毫秒
+//        factoryBean.setPriority(2);
+//        factoryBean.setStartDelay(1000L*10);
 //        return factoryBean;
 //    }
 

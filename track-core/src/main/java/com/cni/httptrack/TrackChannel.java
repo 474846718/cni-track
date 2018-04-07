@@ -18,13 +18,6 @@ public class TrackChannel {
     //用于标识
     private String tag;
 
-    public TrackChannel(Converter converter, String urlSegment, OrderNumMatcher orderNumMatcher) {
-        this.converter = converter;
-        this.urlSegment = urlSegment;
-        this.orderNumMatcher = orderNumMatcher;
-        this.converter.setOrderNumMatcher(this.orderNumMatcher);
-    }
-
     public String getTag() {
         return tag;
     }
