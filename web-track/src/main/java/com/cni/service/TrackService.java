@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 
 /**
  * 查单业务实现
+ * <p>
  * Created by CNI on 2018/1/18.
  */
 @Service
@@ -33,8 +34,9 @@ public class TrackService {
         this.orderTracker = orderTracker;
     }
 
-
     public List<OrderBill> trackOrders(List<String> numbers) {
         return orderTracker.startTrack(numbers);
     }
+
+
 }

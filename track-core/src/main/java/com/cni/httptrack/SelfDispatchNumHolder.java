@@ -7,6 +7,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 
+import javax.annotation.PostConstruct;
 import java.io.*;
 import java.util.Collections;
 import java.util.Set;
@@ -18,13 +19,13 @@ import java.util.stream.Collectors;
  * 而不是第三方渠道
  */
 
-public class SelfDispatchNumHolder implements InitializingBean {
+public class SelfDispatchNumHolder{
     private static final Logger log = LoggerFactory.getLogger(SelfDispatchNumHolder.class);
     private static final String fileName = "selfdispatch.txt";
     private static final String windowspath = "d:/";
     private static final String linuxpath = "/root/";
     private Set<String> orderNums;
-    private FileWriter writer;
+    private File file;
 
     public void setOrderNums(Set<String> orderNums) {
         synchronized (this) {
@@ -53,27 +54,30 @@ public class SelfDispatchNumHolder implements InitializingBean {
 
 
     private void writeToFile(Set<String> resetNums) {
-        //TODO 写文件后要关闭
         try {
-            for (String num : resetNums)
-                writer.write(num + '\n');
+            BufferedWriter writer=new BufferedWriter(new FileWriter(file,false));
+            for (String num : resetNums) {
+                writer.write(num);
+                writer.newLine();
+            }
             writer.flush();
         } catch (IOException e) {
             log.error("写入失败！", e);
         }
     }
 
-    @Override
-    public void afterPropertiesSet() {
+    @PostConstruct
+    public void postConstruct() {
         try {
             String path = System.getProperty("os.name").equals("Windows 10") ? windowspath : linuxpath;
             Resource resource = new FileSystemResource(path + fileName);
-            File file = resource.exists() ? resource.getFile() : null;
+            file=resource.getFile();
+            if (!file.exists())
+                Assert.isTrue(resource.getFile().createNewFile(),"文件创建失败");
             Assert.notNull(file, "文件对象引用不能为空！");
             BufferedReader reader = new BufferedReader(new FileReader(file));
             setOrderNums(reader.lines().collect(Collectors.toSet()));
             reader.close();
-            writer = new FileWriter(file, false);
         } catch (IOException e) {
             log.error("读取自派送单号文件出错", e);
         }

@@ -50,13 +50,6 @@ public class OrderTracker {
     private SelfDispatchNumHolder selfDispatchNumHolder;
     private Matchers matchers;
 
-    public Matchers getMatchers() {
-        return matchers;
-    }
-
-    public void setMatchers(Matchers matchers) {
-        this.matchers = matchers;
-    }
 
     public SelfDispatchNumHolder getSelfDispatchNumHolder() {
         return selfDispatchNumHolder;
@@ -118,6 +111,14 @@ public class OrderTracker {
         this.client = client;
     }
 
+    public Matchers getMatchers() {
+        return matchers;
+    }
+
+    public void setMatchers(Matchers matchers) {
+        this.matchers = matchers;
+    }
+
     /**
      * 异步的方式进行查单，适合多号查询的情况
      * 保证返回正常的单号 否则抛异常
@@ -127,12 +128,12 @@ public class OrderTracker {
      * @throws Exception 查单失败 转换格式失败 纽曼系统拼单都会抛异常
      */
     public void startTrack(String orderNum, BlockingQueue<OrderBill> queue, TrackChannel trackChannel) {
-        if (getRedisCacheToQueue(orderNum, queue))
-            return;
+//        if (getRedisCacheToQueue(orderNum, queue))
+//            return;
 
         Assert.notNull(client, "没有提供http客户端");
-
         Converter converter = trackChannel.getConverter();
+
         //TODO 以后可以删掉
         if (converter instanceof DelhiveryConverter && selfDispachOnDel(orderNum, queue, trackChannel))
             return;
@@ -159,10 +160,10 @@ public class OrderTracker {
                         } catch (NeomanException ignored) {
                             log.warn("钮门拼单失败：" + orderNum);
                         }
-                        orderBillDao.save(orderBill);
+                        orderBillDao.upsert(orderBill);
                         log.warn("查单成功！已存数据库：" + orderNum);
                         queue.add(orderBill);
-                        putRedisCache(orderNum, orderBill, 15);
+//                        putRedisCache(orderNum, orderBill, 15);
                     } catch (RuntimeException ignored) {
                         log.warn("插入Mongodb失败：" + orderNum);
                         enqueueErrorBill(false);
@@ -186,58 +187,53 @@ public class OrderTracker {
                 OrderBill orderBill = OrderBill.error(orderNum);
                 queue.add(orderBill);
                 if (isCache) {
-                    putRedisCache(orderNum, orderBill, 10);
+//                    putRedisCache(orderNum, orderBill, 10);
                 }
             }
         });
     }
 
     /**
-     * 查询一群单号
+     * 异步追踪一群单号
+     * 超过30秒放弃追踪
      *
      * @param orderNums 单号
-     * @return 运单数据
      */
     public List<OrderBill> startTrack(List<String> orderNums) {
-        BlockingQueue<OrderBill> blockingQueue = new ArrayBlockingQueue<>(orderNums.size());
+        BlockingQueue<OrderBill> queue = new ArrayBlockingQueue<>(orderNums.size());
         for (String num : orderNums) {
             List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
             if (CollectionUtils.isEmpty(matchedTrackChannels))
-                blockingQueue.add(OrderBill.error(num));
-            TrackChannel trackChannel = matchedTrackChannels.get(0);
-            //TODO 处理多家匹配
-            this.startTrack(num, blockingQueue, trackChannel);
+                queue.add(OrderBill.error(num));
+            TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
+            startTrack(num, queue, trackChannel);
         }
-        return getFromQueue(blockingQueue, orderNums);
+        return obtainFromQueue(queue, orderNums);
     }
 
     /**
-     * 按渠道查询一群单号
+     * 指定渠道追踪一群单号
      *
-     * @param orderNums    单号
-     * @param trackChannel 查询渠道
-     * @return 运单数据
+     * @param orderNums 单号
      */
-    public List<OrderBill> startTrack(List<String> orderNums, TrackChannel trackChannel) {
-        BlockingQueue<OrderBill> blockingQueue = new ArrayBlockingQueue<>(orderNums.size());
+    public List<OrderBill> startTrack(List<String> orderNums,TrackChannel channel) {
+        BlockingQueue<OrderBill> queue = new ArrayBlockingQueue<>(orderNums.size());
         for (String num : orderNums)
-            this.startTrack(num, blockingQueue, trackChannel);
-        return getFromQueue(blockingQueue, orderNums);
+            this.startTrack(num, queue, channel);
+        return obtainFromQueue(queue, orderNums);
     }
 
 
     /**
      * 从队列获取结果
      *
-     * @param blockingQueue 队列
-     * @param orderNums     单号
      * @return 运单数据
      */
-    private List<OrderBill> getFromQueue(BlockingQueue<OrderBill> blockingQueue, List<String> orderNums) {
+    private List<OrderBill> obtainFromQueue(BlockingQueue<OrderBill> queue, List<String> orderNums) {
         List<OrderBill> list = new ArrayList<>(orderNums.size());
         try {
             for (int i = 0; i < orderNums.size(); i++)
-                list.add(blockingQueue.poll(40, TimeUnit.SECONDS));
+                list.add(queue.poll(30, TimeUnit.SECONDS));
         } catch (InterruptedException e) {
             orderNums.removeAll(list.stream()
                     .map(OrderBill::getNumber)
@@ -246,8 +242,8 @@ public class OrderTracker {
             list.addAll(orderNums.stream().map(OrderBill::error).collect(Collectors.toList()));
         }
         return list;
-
     }
+
 
     @PostConstruct
     public void postConstruct() {
@@ -255,7 +251,6 @@ public class OrderTracker {
         neomanJoint = new NeomanJoint(this.client);
         neomanJoint.setBaseUrl(baseUrl.newBuilder().host("www.cnilink.com").build());
     }
-
 
     /**
      * 查找缓存
@@ -277,7 +272,6 @@ public class OrderTracker {
         }
         return false;
     }
-
 
     private void putRedisCache(String key, Object object, long miniteLong) {
         try {
@@ -321,10 +315,10 @@ public class OrderTracker {
                     OrderBill orderBill = neomanConverter2.convert(neomanResponseBody);
 
                     try {
-                        orderBillDao.save(orderBill);
+                        orderBillDao.upsert(orderBill);
                         log.warn("查单成功！已存数据库：" + orderNum);
                         queue.add(orderBill);
-                        putRedisCache(orderNum, orderBill, 15);
+//                        putRedisCache(orderNum, orderBill, 15);
                     } catch (RuntimeException ignored) {
                         log.warn("插入Mongodb失败：" + orderNum);
                         enqueueErrorBill(false);
@@ -348,7 +342,7 @@ public class OrderTracker {
                 OrderBill orderBill = OrderBill.error(orderNum);
                 queue.add(orderBill);
                 if (isCache) {
-                    putRedisCache(orderNum, orderBill, 10);
+//                    putRedisCache(orderNum, orderBill, 10);
                 }
             }
         });
