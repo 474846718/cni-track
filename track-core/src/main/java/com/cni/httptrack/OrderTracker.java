@@ -38,14 +38,13 @@ import java.util.stream.Collectors;
 public class OrderTracker {
     private static final Logger log = LoggerFactory.getLogger(OrderTracker.class);
 
-    private NeomanJoint neomanJoint = null;
+    private NeomanJoint neomanJoint;
     private OkHttpClient client;
     private String scheme;
     private String host;
     private int port;
     private String version;
     private HttpUrl baseUrl;
-    private RedisTemplate<String, Object> redisTemplate;
     private OrderBillDao orderBillDao;
     private SelfDispatchNumHolder selfDispatchNumHolder;
     private Matchers matchers;
@@ -57,14 +56,6 @@ public class OrderTracker {
 
     public void setSelfDispatchNumHolder(SelfDispatchNumHolder selfDispatchNumHolder) {
         this.selfDispatchNumHolder = selfDispatchNumHolder;
-    }
-
-    public RedisTemplate<String, Object> getRedisTemplate() {
-        return redisTemplate;
-    }
-
-    public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
-        this.redisTemplate = redisTemplate;
     }
 
     public String getScheme() {
@@ -119,6 +110,7 @@ public class OrderTracker {
         this.matchers = matchers;
     }
 
+
     /**
      * 异步的方式进行查单，适合多号查询的情况
      * 保证返回正常的单号 否则抛异常
@@ -127,9 +119,8 @@ public class OrderTracker {
      * @param trackChannel 查询渠道
      * @throws Exception 查单失败 转换格式失败 纽曼系统拼单都会抛异常
      */
-    public void startTrack(String orderNum, BlockingQueue<OrderBill> queue, TrackChannel trackChannel) {
-//        if (getRedisCacheToQueue(orderNum, queue))
-//            return;
+    public void startTrackRet(String orderNum, BlockingQueue<OrderBill> queue, TrackChannel trackChannel) {
+
 
         Assert.notNull(client, "没有提供http客户端");
         Converter converter = trackChannel.getConverter();
@@ -150,8 +141,8 @@ public class OrderTracker {
                 try {
                     ResponseBody responseBody = response.body();
                     Assert.notNull(responseBody, "返回值为空");
-
-                    Object in = JSON.parseObject(responseBody.string(), converter.getTypeConvertBefore());
+                    String res = responseBody.string();
+                    Object in = JSON.parseObject(res, converter.getTypeConvertBefore());
                     OrderBill orderBill = converter.convert(in);
 
                     try {
@@ -166,29 +157,26 @@ public class OrderTracker {
 //                        putRedisCache(orderNum, orderBill, 15);
                     } catch (RuntimeException ignored) {
                         log.warn("插入Mongodb失败：" + orderNum);
-                        enqueueErrorBill(false);
+                        enqueueErrorBill();
                     }
                 } catch (ConvertException e) {
                     log.warn("运单转换时出错：" + orderNum, e);
-                    enqueueErrorBill(true);
+                    enqueueErrorBill();
                 } catch (IOException e) {
                     log.warn("读取渠道http响应体字符串失败:" + orderNum, e);
-                    enqueueErrorBill(false);
+                    enqueueErrorBill();
                 } catch (OrderNotFoundException ignored) {
                     log.warn("查无此单:" + orderNum);
-                    enqueueErrorBill(true);
+                    enqueueErrorBill();
                 } catch (RuntimeException e) {
                     log.warn("追踪时发生其他异常:" + orderNum, e);
-                    enqueueErrorBill(false);
+                    enqueueErrorBill();
                 }
             }
 
-            private void enqueueErrorBill(boolean isCache) {
+            private void enqueueErrorBill() {
                 OrderBill orderBill = OrderBill.error(orderNum);
                 queue.add(orderBill);
-                if (isCache) {
-//                    putRedisCache(orderNum, orderBill, 10);
-                }
             }
         });
     }
@@ -199,33 +187,102 @@ public class OrderTracker {
      *
      * @param orderNums 单号
      */
-    public List<OrderBill> startTrack(List<String> orderNums) {
+    public List<OrderBill> startTrackRet(List<String> orderNums) {
         BlockingQueue<OrderBill> queue = new ArrayBlockingQueue<>(orderNums.size());
         for (String num : orderNums) {
             List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
             if (CollectionUtils.isEmpty(matchedTrackChannels))
                 queue.add(OrderBill.error(num));
             TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
-            startTrack(num, queue, trackChannel);
+            startTrackRet(num, queue, trackChannel);
         }
         return obtainFromQueue(queue, orderNums);
     }
 
+
+    public void startTrack(List<String> orderNums) {
+        for (String num : orderNums) {
+            List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
+            if (CollectionUtils.isEmpty(matchedTrackChannels))
+                continue;
+            TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
+            startTrack(num, trackChannel);
+        }
+    }
+
+    /**
+     * 不收集结果的 查单
+     * 只存mongodb
+     *
+     * @param orderNum     运单
+     * @param trackChannel 追踪渠道
+     */
+    public void startTrack(String orderNum, TrackChannel trackChannel) {
+        Assert.notNull(client, "没有提供http客户端");
+        Converter converter = trackChannel.getConverter();
+
+        //TODO 以后可以删掉
+        if (converter instanceof DelhiveryConverter && selfDispachOnDel(orderNum, new ArrayBlockingQueue<>(1), trackChannel))
+            return;
+        //正常处理流程
+        HttpUrl rebuildUrl = baseUrl.newBuilder().addPathSegment(trackChannel.getUrlSegment()).addQueryParameter("orderNum", orderNum).build();
+        Request request = new Request.Builder().url(rebuildUrl).get().build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                log.warn("请求失败", e);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) {
+                try {
+                    ResponseBody responseBody = response.body();
+                    Assert.notNull(responseBody, "返回值为空");
+                    String res = responseBody.string();
+                    Object in = JSON.parseObject(res, converter.getTypeConvertBefore());
+                    OrderBill orderBill = converter.convert(in);
+
+                    try {
+                        try {
+                            orderBill = neomanJoint.mergeNeoman(orderBill);
+                        } catch (NeomanException ignored) {
+                            log.warn("钮门拼单失败：" + orderNum);
+                        }
+                        orderBillDao.upsert(orderBill);
+                        log.warn("查单成功！已存数据库：" + orderNum);
+                    } catch (RuntimeException ignored) {
+                        log.warn("插入Mongodb失败：" + orderNum);
+                    }
+                } catch (ConvertException e) {
+                    log.warn("运单转换时出错：" + orderNum, e);
+                } catch (IOException e) {
+                    log.warn("读取渠道http响应体字符串失败:" + orderNum, e);
+
+                } catch (OrderNotFoundException ignored) {
+                    log.warn("查无此单:" + orderNum);
+
+                } catch (RuntimeException e) {
+                    log.warn("追踪时发生其他异常:" + orderNum, e);
+
+                }
+            }
+        });
+    }
+
     /**
      * 指定渠道追踪一群单号
+     * 只存数据库不返回
      *
      * @param orderNums 单号
      */
-    public List<OrderBill> startTrack(List<String> orderNums,TrackChannel channel) {
-        BlockingQueue<OrderBill> queue = new ArrayBlockingQueue<>(orderNums.size());
-        for (String num : orderNums)
-            this.startTrack(num, queue, channel);
-        return obtainFromQueue(queue, orderNums);
+    public void startTrack(List<String> orderNums, TrackChannel channel) {
+        orderNums.forEach(num -> startTrack(num, channel));
     }
 
 
     /**
      * 从队列获取结果
+     * 超过30秒则放弃
      *
      * @return 运单数据
      */
@@ -252,34 +309,6 @@ public class OrderTracker {
         neomanJoint.setBaseUrl(baseUrl.newBuilder().host("www.cnilink.com").build());
     }
 
-    /**
-     * 查找缓存
-     *
-     * @param key   单号
-     * @param queue 队列发送命中的缓存运单
-     * @return 是否命中缓存
-     */
-    private boolean getRedisCacheToQueue(String key, BlockingQueue<OrderBill> queue) {
-        try {
-            OrderBill orderBill = (OrderBill) redisTemplate.opsForValue().get(key);
-            if (!ObjectUtils.isEmpty(orderBill)) {
-                queue.add(orderBill);
-                log.warn("命中redis缓存：" + key);
-                return true;
-            }
-        } catch (RuntimeException e) {
-            log.warn("redis读取缓存失败", e);
-        }
-        return false;
-    }
-
-    private void putRedisCache(String key, Object object, long miniteLong) {
-        try {
-            redisTemplate.opsForValue().set(key, object, miniteLong, TimeUnit.MINUTES);
-        } catch (RuntimeException e) {
-            log.warn("redis写入缓存失败", e);
-        }
-    }
 
     /**
      * TODO 以后可以删除

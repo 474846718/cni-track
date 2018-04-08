@@ -6,5 +6,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface OverOrderBillRepository extends MongoRepository<OverOrderBill,String> {}
+public interface OverOrderBillDao extends MongoRepository<OverOrderBill,String> {}
 

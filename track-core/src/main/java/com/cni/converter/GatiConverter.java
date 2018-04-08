@@ -181,7 +181,7 @@ public class GatiConverter implements Converter<GatiResponseBody> {
                     .filter(Objects::nonNull)
                     .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setInfoNodes(infoNodes);
+            body.setScans(infoNodes);
             return body;
         } catch (Exception e) {
             throw new ConvertException("gati运单转换失败", e);

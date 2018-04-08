@@ -2,16 +2,14 @@ package com.cni.job;
 
 
 import com.cni.dao.OrderBillDao;
-import com.cni.dao.OverOrderBillDao;
 import com.cni.dao.entity.OrderBill;
 import com.cni.dao.entity.OverOrderBill;
+import com.cni.dao.repository.OverOrderBillDao;
 import com.cni.httptrack.OrderTracker;
-import com.cni.matcher.Matchers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -26,15 +24,6 @@ public class OrderBillJobs {
     private OrderBillDao orderBillDao;
     private OverOrderBillDao overOrderBillDao;
     private OrderTracker orderTracker;
-    private Matchers matchers;
-
-    public Matchers getMatchers() {
-        return matchers;
-    }
-
-    public void setMatchers(Matchers matchers) {
-        this.matchers = matchers;
-    }
 
     public OrderBillDao getOrderBillDao() {
         return orderBillDao;
@@ -66,11 +55,14 @@ public class OrderBillJobs {
      * 并且转存到归档表
      */
     public synchronized void restoreOverOrders() {
+        logger.warn("===开始归档活跃表===");
         List<OrderBill> restoreOrderBills = orderBillDao.findOverOrderBill();
-        System.out.println("活跃表将要归档的文档长度" + restoreOrderBills.size());
+        logger.warn("记录总数：" + restoreOrderBills.size());
         List<OverOrderBill> overOrderBills = restoreOrderBills.stream().map(OverOrderBill::new).collect(Collectors.toList());
-        overOrderBillDao.insert(overOrderBills);
-        orderBillDao.removeOrderBill(restoreOrderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList()));
+        overOrderBillDao.insert(overOrderBills);//todo 要做插入检查
+        List<String> restoreNums = restoreOrderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+        orderBillDao.removeOrderBill(restoreNums);
+        logger.warn("===结束归档活跃表===");
     }
 
     /**
@@ -78,9 +70,12 @@ public class OrderBillJobs {
      * 并且取消追踪
      */
     public synchronized void checkExpiredOrders() {
+        logger.warn("===开始检查超时运单===");
         List<String> expired = orderBillDao.findExpirdOrderBill();
-        expired.forEach(logger::warn);
-        logger.warn("获取长时间无更新的订单" + expired.size());
+        logger.warn("记录总数：" + expired.size());
+        //todo 写入文件
+        orderBillDao.removeOrderBill(expired);
+        logger.warn("===结束检查超时运单===");
     }
 
 
@@ -88,12 +83,12 @@ public class OrderBillJobs {
      * 追踪活跃表的运单
      */
     public synchronized void autoTrackOrders() {
-        List<OrderBill> onTrackNums = orderBillDao.findAllNumberAndTailCompany();  //获取实体对象
-        Map<String, List<OrderBill>> groupByTailComp = onTrackNums.stream().collect(Collectors.groupingBy(OrderBill::getTailCompany)); //按照标记分组
-        Matchers matchers = orderTracker.getMatchers();
-        groupByTailComp.forEach((key, value) -> {
-            List<String> orderNums = value.stream().map(OrderBill::getNumber).collect(Collectors.toList());
-            orderTracker.startTrack(orderNums, matchers.getTrackChannel(key));  //传入 entry kv
-        });
+        //获取实体对象 分组
+        logger.warn("===开始查询活跃表未完成运单===");
+        List<OrderBill> orderBills = orderBillDao.findAllOnTrack();
+        logger.warn("记录总数：" + orderBills.size());
+        List<String> orderNums = orderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+        orderTracker.startTrack(orderNums);
+        logger.warn("===结束查询活跃表未完成运单===");
     }
 }

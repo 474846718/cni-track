@@ -125,6 +125,7 @@ public class EcomConverter implements Converter<EcomResponseBody> {
                 @Override
                 public String getReferenceNo() {
                     String refAwb = listBean.getRef_awb();
+                    ecomMatcher = new OrderNumMatcher("2\\d{8}");
                     return ecomMatcher.match(refAwb) ? refAwb : null;
                 }
 
@@ -190,9 +191,9 @@ public class EcomConverter implements Converter<EcomResponseBody> {
                     })
                     .filter(Objects::nonNull)
                     .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
-
                     .collect(Collectors.toList());
-            body.setInfoNodes(infoNodes);
+
+            body.setScans(infoNodes);
             return body;
         } catch (Exception e) {
             throw new ConvertException("ecom运单转换异常", e);

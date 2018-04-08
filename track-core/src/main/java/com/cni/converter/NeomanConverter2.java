@@ -187,7 +187,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
             myInfoNodes.stream()
                     .skip(index + 1)
                     .forEach(scan -> scan.setPlace(""));
-        doc.setInfoNodes(myInfoNodes);
+        doc.setScans(myInfoNodes);
         return doc;
     }
 

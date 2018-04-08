@@ -71,13 +71,13 @@ public class OverOrderBill implements Serializable {
         dispatchCount=copy.getDispatchCount();
         exception=copy.getException();
         exceptionDetail=copy.getExceptionDetail();
-        infoNodes = copy.getInfoNodes().stream()
+        infoNodes = copy.getScans().stream()
                 .map(infoNode -> {
                     InfoNode infoNode1 = new InfoNode();
                     infoNode1.setDate(infoNode.getDate());
                     infoNode1.setInfo(infoNode.getInfo());
-                    infoNode.setPlace(infoNode.getPlace());
-                    infoNode.setStatus(infoNode.getStatus());
+                    infoNode1.setPlace(infoNode.getPlace());
+                    infoNode1.setStatus(infoNode.getStatus());
                     return infoNode1;
                 }).sorted((o1, o2) -> o2.getDate().compareTo(o1.getDate())).collect(Collectors.toList());
     }

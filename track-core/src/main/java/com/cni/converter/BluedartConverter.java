@@ -195,7 +195,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
                 scanDetailBeanList = secondBean.getScans().getScanDetail();
                 result.addAll(convertScanBean(scanDetailBeanList, body.getFlow(), true));
             }
-            body.setInfoNodes(result);
+            body.setScans(result);
             return body;
         } catch (Exception e) {
             throw new ConvertException("bd运单转换失败！", e);

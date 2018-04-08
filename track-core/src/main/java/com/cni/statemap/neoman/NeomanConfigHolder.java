@@ -38,6 +38,10 @@ public class NeomanConfigHolder implements MapConfigHolder {
         static final int REGEX = 2;
     }
 
+    public void setCurrMapRows(List<MapRow> currMapRows) {
+        this.currMapRows = currMapRows;
+    }
+
     private interface GetRemoteConfig {
         @GET("/v1.0.0/statusConfig/findByChannelName")
         Call<StateMappingResponseBody> findByChannelName(@Query("channelName") String channelName,

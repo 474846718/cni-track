@@ -1,6 +1,7 @@
 package com.cni.service;
 
 import com.alibaba.fastjson.JSON;
+import com.cni.dao.entity.OrderBill;
 import com.cni.statemap.MapRow;
 import com.cni.statemap.neoman.NeomanConfigHolder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,11 +15,11 @@ import java.util.List;
 public class MappingHolderService {
 
     private final NeomanConfigHolder holder;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, OrderBill> redisTemplate;
 
     @Autowired
     public MappingHolderService(NeomanConfigHolder holder,
-                                RedisTemplate<String,Object> redisTemplate) {
+                                RedisTemplate<String, OrderBill> redisTemplate) {
         this.holder = holder;
         this.redisTemplate = redisTemplate;
 
@@ -30,15 +31,15 @@ public class MappingHolderService {
      *
      * @return 成功或失败
      */
-    public boolean reloadHolder() {
+    public String reloadHolder() {
         try {
             holder.init();
             //TODO 添加清空redis的操作不生效
             redisTemplate.delete(redisTemplate.keys("*"));
-            return true;
+            return JSON.toJSONString(holder.getCurrMapRows());
         } catch (Exception e) {
             System.err.println("从网络获取配置失败");
-            return false;
+            return Boolean.toString(false);
         }
     }
 

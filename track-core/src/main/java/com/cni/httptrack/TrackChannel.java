@@ -32,6 +32,7 @@ public class TrackChannel {
 
     public void setConverter(Converter converter) {
         this.converter = converter;
+        converter.setOrderNumMatcher(orderNumMatcher);
     }
 
     public String getUrlSegment() {

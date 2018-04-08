@@ -211,7 +211,7 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
                     .filter(Objects::nonNull)
                     .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setInfoNodes(myInfoNodes);
+            body.setScans(myInfoNodes);
             return body;
         } catch (Exception e) {
             throw new ConvertException("del运单转换失败", e);

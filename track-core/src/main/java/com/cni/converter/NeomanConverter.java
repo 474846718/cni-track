@@ -53,7 +53,7 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
             } catch (Exception ignored) {}
         } catch (Exception ignored) {}
         OrderBill doc=new OrderBill();
-        doc.setInfoNodes(result);
+        doc.setScans(result);
         return doc;
     }
 

@@ -14,11 +14,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 查找单条信息的响应体
- * <p>
- * 因为查询结果要在Redis中作缓存，所以必须实现Serializable接口
- * <p>
- * Created by CNI on 2018/1/23.
+ * 运单信息实体类
+ * 不要随便修改字段 否则反序列化失败
  */
 public class OrderBill implements Serializable, Cloneable {
     public static final String FLOW_FORWARD = "FORWARD";
@@ -73,7 +70,7 @@ public class OrderBill implements Serializable, Cloneable {
 
     private boolean exception;
     private String exceptionDetail;
-    private List<InfoNode> infoNodes = new ArrayList<>();
+    private List<InfoNode> scans = new ArrayList<>();
 
 
     public static OrderBill error(String number) {
@@ -88,26 +85,26 @@ public class OrderBill implements Serializable, Cloneable {
      * @param body 被拼接的单号
      */
     public void joinInfoNode(OrderBill body) {
-        if (!ObjectUtils.isEmpty(body) && !CollectionUtils.isEmpty(body.getInfoNodes())) {
-            infoNodes.addAll(body.getInfoNodes());
+        if (!ObjectUtils.isEmpty(body) && !CollectionUtils.isEmpty(body.getScans())) {
+            scans.addAll(body.getScans());
             setHeadCompany("CNI");
         }
-        infoNodes = infoNodes.stream()
+        scans = scans.stream()
                 // 选择日期非空的
                 .filter(i -> !ObjectUtils.isEmpty(i.getDate()))
                 // 选择信息或地点非空
-                .filter(i -> (!ObjectUtils.isEmpty(i.getInfo()) || !ObjectUtils.isEmpty(i.getPlace()))) //TODO jiancha1
+                .filter(i -> (!ObjectUtils.isEmpty(i.getInfo()) || !ObjectUtils.isEmpty(i.getPlace())))
                 //按照日期降序
                 .sorted(Comparator.comparingLong(InfoNode::getDate).reversed())
                 .collect(Collectors.toList());
         // 去除入库节点前的地点信息
-        int index = findCheckInScanIdx(infoNodes);
+        int index = findCheckInScanIdx(scans);
         if (index > -1)
-            infoNodes.stream()
+            scans.stream()
                     .skip(index + 1)
                     .forEach(scan -> scan.setPlace(""));
 
-        InfoNode latestNode = infoNodes.get(0);
+        InfoNode latestNode = scans.get(0);
         if (excetions.contains(latestNode.getStatus())) {
             exception = true;
             exceptionDetail = latestNode.getInfo();
@@ -152,7 +149,7 @@ public class OrderBill implements Serializable, Cloneable {
                 ", dispatchCount=" + dispatchCount +
                 ", exception=" + exception +
                 ", exceptionDetail='" + exceptionDetail + '\'' +
-                ", infoNodes=" + infoNodes +
+                ", scans=" + scans +
                 '}';
     }
 
@@ -308,12 +305,12 @@ public class OrderBill implements Serializable, Cloneable {
         this.exceptionDetail = exceptionDetail;
     }
 
-    public List<InfoNode> getInfoNodes() {
-        return infoNodes;
+    public List<InfoNode> getScans() {
+        return scans;
     }
 
-    public void setInfoNodes(List<InfoNode> infoNodes) {
-        this.infoNodes = infoNodes;
+    public void setScans(List<InfoNode> scans) {
+        this.scans = scans;
     }
 
     @Override

@@ -30,7 +30,7 @@ public class MappingManageController {
 
     @GetMapping("reloadConfig")
     public String reloadConfig() {
-        return Boolean.toString(service.reloadHolder());
+        return service.reloadHolder();
     }
 
     @PostMapping("addConfig")

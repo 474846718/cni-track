@@ -43,6 +43,13 @@ public class OrderBillDaoImpl implements OrderBillDao {
         mongoTemplate.upsert(query, update, OrderBill.class);
     }
 
+    @Override
+    public List<OrderBill> findById(List<String> ids) {
+        Criteria criteria = Criteria.where("_id").in(ids);
+        Query query=new Query(criteria);
+        return mongoTemplate.find(query, OrderBill.class);
+    }
+
     /**
      * 获取所有单号
      *
@@ -61,16 +68,18 @@ public class OrderBillDaoImpl implements OrderBillDao {
     }
 
     /**
-     * 获取只包含单号和尾程公司的运单实体类
+     * 查询所有在追踪的单号
+     * 包含尾程公司标记
      *
-     * @return
+     * @return 实体对象
      */
     @Override
-    public List<OrderBill> findAllNumberAndTailCompany() {
+    public List<OrderBill> findAllOnTrack() {
         BasicDBObject fieldsObject = new BasicDBObject();
         fieldsObject.append("_id", true);
         fieldsObject.append("tailCompany", true);
         Query query = new BasicQuery(new BasicDBObject(), fieldsObject);
+        query.addCriteria(Criteria.where("scans.0.status").nin(ACCOMPLISH_STATE));
         return mongoTemplate.find(query, OrderBill.class);
     }
 
@@ -113,8 +122,8 @@ public class OrderBillDaoImpl implements OrderBillDao {
 
     @Override
     public void removeOrderBill(List<String> orderNums) {
-        Query query=new Query(Criteria.where("_id").in(orderNums));
-        mongoTemplate.remove(query,OrderBill.class);
+        Query query = new Query(Criteria.where("_id").in(orderNums));
+        mongoTemplate.remove(query, OrderBill.class);
     }
 
     @Override
@@ -125,6 +134,7 @@ public class OrderBillDaoImpl implements OrderBillDao {
         fieldsObject.put("_id", true);
         //只返回指定字段
         BasicQuery basicQuery = new BasicQuery(new BasicDBObject(), fieldsObject);
+
 
         basicQuery.addCriteria(Criteria.where("scans.0.status").nin(ACCOMPLISH_STATE)
                 .and("scans.0.date").lte(longTimeStamp));

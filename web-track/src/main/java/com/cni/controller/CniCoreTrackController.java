@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @CrossOrigin(origins = "*", maxAge = 3600) //标记为支持跨域
@@ -29,7 +31,7 @@ public class CniCoreTrackController {
         try {
             if (StringUtils.isEmpty(awb))
                 return CommonResponseBody.error("400", "请输入单号");
-            List<String> nums = CollectionUtils.arrayToList(awb.split(","));
+            List<String> nums = new ArrayList<>(Arrays.asList(StringUtils.split(awb, ",")));
             if (CollectionUtils.isEmpty(nums))
                 return CommonResponseBody.error("400", "请输入单号");
             List<OrderBill> results = trackService.trackOrders(nums);

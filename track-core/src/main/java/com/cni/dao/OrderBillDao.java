@@ -16,13 +16,19 @@ public interface OrderBillDao{
      */
     void upsert(OrderBill orderBill);
 
+    List<OrderBill> findById(List<String> ids);
+
     /**
      * 获取所有单号
      * @return
      */
     List<String> findAllNumber();
 
-    List<OrderBill> findAllNumberAndTailCompany();
+    /**
+     * 查找所有正在追踪的单号
+     * @return
+     */
+    List<OrderBill> findAllOnTrack();
     /**
      * 通过单号
      */
@@ -34,7 +40,7 @@ public interface OrderBillDao{
     List<OrderBill> findOverOrderBill();
 
     /**
-     *
+     *按照单号删除所有数据
      */
     void removeOrderBill(List<String> orderNums);
 

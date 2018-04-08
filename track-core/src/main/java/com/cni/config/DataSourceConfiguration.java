@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -24,6 +25,8 @@ import java.util.List;
 /**
  * 数据源配置
  */
+
+@ConditionalOnMissingBean({MongoTemplate.class})
 @Configuration
 public class DataSourceConfiguration {
     @Value("${spring.data.mongodb.host:localhost}")
@@ -36,26 +39,6 @@ public class DataSourceConfiguration {
     private String mongodbUser;
     @Value("${spring.data.mongodb.password:}")
     private String mongodbPassword;
-
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-        redisTemplate.setConnectionFactory(redisConnectionFactory);
-
-        // 使用Jackson2JsonRedisSerialize 替换默认序列化
-        Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        objectMapper.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-        jackson2JsonRedisSerializer.setObjectMapper(objectMapper);
-
-        // 设置value的序列化规则和 key的序列化规则
-        redisTemplate.setValueSerializer(jackson2JsonRedisSerializer);
-        redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.afterPropertiesSet();
-        return redisTemplate;
-    }
 
     @Bean
     public MongoTemplate mongoTemplate() {
@@ -71,11 +54,11 @@ public class DataSourceConfiguration {
 
         MongoClient mongoClient;
         if (StringUtils.isEmpty(mongodbUser) && StringUtils.isEmpty(mongodbPassword))
-            mongoClient=new MongoClient(serverAddress, mongoClientOptions);
+            mongoClient = new MongoClient(serverAddress, mongoClientOptions);
         else {
             List<MongoCredential> mongoCredentials = Collections.singletonList(MongoCredential.createCredential(mongodbUser, mongodbDataBase, mongodbPassword.toCharArray()));
-            mongoClient=new MongoClient(serverAddress,mongoCredentials,mongoClientOptions);
+            mongoClient = new MongoClient(serverAddress, mongoCredentials, mongoClientOptions);
         }
-        return new MongoTemplate(mongoClient,mongodbDataBase);
+        return new MongoTemplate(mongoClient, mongodbDataBase);
     }
 }

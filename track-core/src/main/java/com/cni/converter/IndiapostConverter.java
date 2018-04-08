@@ -186,7 +186,7 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
                     .filter(Objects::nonNull)
                     .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setInfoNodes(myInfoNodes);
+            body.setScans(myInfoNodes);
             return body;
         } catch (Exception e) {
             throw new ConvertException("ind运单转换失败", e);

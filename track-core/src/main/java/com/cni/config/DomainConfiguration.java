@@ -11,8 +11,8 @@ import com.cni.matcher.OrderNumMatcher;
 import com.cni.statemap.neoman.NeomanConfigHolder;
 import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
 
@@ -26,6 +26,9 @@ import java.util.concurrent.TimeUnit;
 
 @Configuration
 public class DomainConfiguration {
+
+    @Value("${transformHost:www.cnilink.com}")
+    private String host;
 
     @Bean
     public OkHttpClient okHttpClient() {
@@ -46,20 +49,6 @@ public class DomainConfiguration {
         return new SelfDispatchNumHolder();
     }
 
-    @Bean
-    public OrderTracker orderTracker(OrderBillDao orderBillDao, RedisTemplate<String, Object> redisTemplate) {
-        OrderTracker orderTracker = new OrderTracker();
-        orderTracker.setSelfDispatchNumHolder(selfDispatchNumHolder());//TODO 以后可以删除
-        orderTracker.setScheme("http");
-        orderTracker.setHost("www.cnilink.com");
-        orderTracker.setPort(9999);
-        orderTracker.setVersion("v1.0.0");
-        orderTracker.setClient(okHttpClient());
-        orderTracker.setOrderBillDao(orderBillDao);
-        orderTracker.setRedisTemplate(redisTemplate);
-        orderTracker.setMatchers(matchers());
-        return orderTracker;
-    }
 
     @Bean
     public NeomanConfigHolder neomanHolder() {
@@ -67,59 +56,58 @@ public class DomainConfiguration {
     }
 
     @Bean
-    public TrackChannel trackChanne() {
-        TrackChannel trackChannel =new TrackChannel();
-        trackChannel.setConverter(new DelhiveryConverter(neomanHolder()));
-        trackChannel.setOrderNumMatcher(new OrderNumMatcher("1\\d{12}"));
-        trackChannel.setTag("DELHIVERY");
-        trackChannel.setUrlSegment("delhivery");
-        return trackChannel;
-    }
+    public Matchers matchers() {
+        TrackChannel delhivery = new TrackChannel();
+        delhivery.setConverter(new DelhiveryConverter(neomanHolder()));
+        delhivery.setOrderNumMatcher(new OrderNumMatcher("1\\d{12}"));
+        delhivery.setTag("DELHIVERY");
+        delhivery.setUrlSegment("delhivery");
 
-    @Bean
-    public TrackChannel trackChanne1() {
-        TrackChannel trackChannel =new TrackChannel();
-        trackChannel.setConverter(new BluedartConverter(neomanHolder()));
-        trackChannel.setOrderNumMatcher(new OrderNumMatcher("\\d{11}"));
-        trackChannel.setTag("BLUE DART");
-        trackChannel.setUrlSegment("bluedart");
-        return trackChannel;
-    }
+        TrackChannel bluedart = new TrackChannel();
+        bluedart.setConverter(new BluedartConverter(neomanHolder()));
+        bluedart.setOrderNumMatcher(new OrderNumMatcher("\\d{11}"));
+        bluedart.setTag("BLUE DART");
+        bluedart.setUrlSegment("bluedart");
 
-    @Bean
-    public TrackChannel trackChanne2() {
-        TrackChannel trackChannel =new TrackChannel();
-        trackChannel.setConverter(new EcomConverter(neomanHolder()));
-        trackChannel.setOrderNumMatcher(new OrderNumMatcher("2\\d{8}"));
-        trackChannel.setTag("ECOM EXPRESS");
-        trackChannel.setUrlSegment("ecom");
-        return trackChannel;
-    }
+        TrackChannel ecom = new TrackChannel();
+        ecom.setConverter(new EcomConverter(neomanHolder()));
+        ecom.setOrderNumMatcher(new OrderNumMatcher("2\\d{8}"));
+        ecom.setTag("ECOM EXPRESS");
+        ecom.setUrlSegment("ecom");
 
-    @Bean
-    public TrackChannel trackChanne3() {
-        TrackChannel trackChannel =new TrackChannel();
-        trackChannel.setConverter(new IndiapostConverter(neomanHolder()));
-        trackChannel.setOrderNumMatcher(new OrderNumMatcher("\\w{2}\\d{9}\\w{2}"));
-        trackChannel.setTag("INDIA POST");
-        trackChannel.setUrlSegment("indiapost");
-        return trackChannel;
-    }
+        TrackChannel indiapost = new TrackChannel();
+        indiapost.setConverter(new IndiapostConverter(neomanHolder()));
+        indiapost.setOrderNumMatcher(new OrderNumMatcher("\\w{2}\\d{9}\\w{2}"));
+        indiapost.setTag("INDIA POST");
+        indiapost.setUrlSegment("indiapost");
 
-    @Bean
-    public TrackChannel trackChanne4() {
-        TrackChannel trackChannel =new TrackChannel();
-        trackChannel.setConverter(new GatiConverter(neomanHolder()));
-        trackChannel.setOrderNumMatcher(new OrderNumMatcher("6\\d{8}"));
-        trackChannel.setTag("GATI");
-        trackChannel.setUrlSegment("gati");
-        return trackChannel;
-    }
+        TrackChannel gati = new TrackChannel();
+        gati.setConverter(new GatiConverter(neomanHolder()));
+        gati.setOrderNumMatcher(new OrderNumMatcher("6\\d{8}"));
+        gati.setTag("GATI");
+        gati.setUrlSegment("gati");
 
-    @Bean
-    public Matchers matchers(TrackChannel... trackChannels) {
         Matchers matchers = new Matchers();
-        matchers.add(trackChannels);
+        matchers.add(delhivery);
+        matchers.add(bluedart);
+        matchers.add(ecom);
+        matchers.add(indiapost);
+        matchers.add(gati);
+
         return matchers;
+    }
+
+    @Bean
+    public OrderTracker orderTracker(OrderBillDao orderBillDao) {
+        OrderTracker orderTracker = new OrderTracker();
+        orderTracker.setSelfDispatchNumHolder(selfDispatchNumHolder());//TODO 以后可以删除
+        orderTracker.setScheme("http");
+        orderTracker.setHost(host);
+        orderTracker.setPort(9999);
+        orderTracker.setVersion("v1.0.0");
+        orderTracker.setClient(okHttpClient());
+        orderTracker.setOrderBillDao(orderBillDao);
+        orderTracker.setMatchers(matchers());
+        return orderTracker;
     }
 }
