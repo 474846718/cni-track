@@ -59,7 +59,7 @@ public class OrderBillJobs {
         List<OrderBill> restoreOrderBills = orderBillDao.findOverOrderBill();
         logger.warn("记录总数：" + restoreOrderBills.size());
         List<OverOrderBill> overOrderBills = restoreOrderBills.stream().map(OverOrderBill::new).collect(Collectors.toList());
-        overOrderBillDao.insert(overOrderBills);//todo 要做插入检查
+        overOrderBillDao.insert(overOrderBills);//todo 要做按最新日期更新
         List<String> restoreNums = restoreOrderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
         orderBillDao.removeOrderBill(restoreNums);
         logger.warn("===结束归档活跃表===");
@@ -77,7 +77,6 @@ public class OrderBillJobs {
         orderBillDao.removeOrderBill(expired);
         logger.warn("===结束检查超时运单===");
     }
-
 
     /**
      * 追踪活跃表的运单

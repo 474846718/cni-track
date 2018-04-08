@@ -193,8 +193,10 @@ public class OrderTracker {
             List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
             if (CollectionUtils.isEmpty(matchedTrackChannels))
                 queue.add(OrderBill.error(num));
-            TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
-            startTrackRet(num, queue, trackChannel);
+            else {
+                TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
+                startTrackRet(num, queue, trackChannel);
+            }
         }
         return obtainFromQueue(queue, orderNums);
     }

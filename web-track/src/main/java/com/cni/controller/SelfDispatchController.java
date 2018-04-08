@@ -12,8 +12,13 @@ import java.util.stream.Collectors;
 @RequestMapping("selfDispatch")
 @RestController
 public class SelfDispatchController {
+
+    final SelfDispatchNumHolder selfDispatchNumHolder;
+
     @Autowired
-    SelfDispatchNumHolder selfDispatchNumHolder;
+    public SelfDispatchController(SelfDispatchNumHolder selfDispatchNumHolder) {
+        this.selfDispatchNumHolder = selfDispatchNumHolder;
+    }
 
     @GetMapping("getAll")
     public Set<String> getAll(){

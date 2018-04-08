@@ -67,7 +67,9 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
         item.setStatus(findMapping(trackData.getInfo()));
         item.setDate(DateUtils.parse(formatter.get(), trackData.getDateTime()));
         item.setPlace(trackData.getPlace());
-        item.setInfo(trackData.getInfo());
+        String info =trackData.getInfo();
+        if (info.matches("The electrolic infomation has been received on.*"))
+            item.setInfo("The electrolic infomation has been received");
         return item;
     }
 

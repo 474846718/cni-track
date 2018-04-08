@@ -78,7 +78,10 @@ public class TrackService {
 
 
         List<OrderBill> trackRes = orderTracker.startTrackRet(numbers);
-        List<String> trackNums=trackRes.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+        List<String> trackNums=trackRes.stream()
+                .filter(Objects::nonNull)
+                .map(OrderBill::getNumber)
+                .collect(Collectors.toList());
         log.warn("网络查单" + trackNums);
 
 
