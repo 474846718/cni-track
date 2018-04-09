@@ -52,12 +52,8 @@
             <groupId>com.cni</groupId>
             <artifactId>cni-track-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>net.sf.ehcache</groupId>
-            <artifactId>ehcache-parent</artifactId>
-            <version>2.3</version>
-            <scope>test</scope>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/../track-core/pom.xml</systemPath>
         </dependency>
     </dependencies>
 

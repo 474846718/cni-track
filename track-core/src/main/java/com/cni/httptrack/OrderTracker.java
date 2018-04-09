@@ -15,10 +15,8 @@ import com.cni.matcher.Matchers;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.ObjectUtils;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -193,8 +191,10 @@ public class OrderTracker {
             List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
             if (CollectionUtils.isEmpty(matchedTrackChannels))
                 queue.add(OrderBill.error(num));
-            TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
-            startTrackRet(num, queue, trackChannel);
+            else {
+                TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
+                startTrackRet(num, queue, trackChannel);
+            }
         }
         return obtainFromQueue(queue, orderNums);
     }

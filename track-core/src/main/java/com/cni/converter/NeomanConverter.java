@@ -36,11 +36,12 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
 
     /**
      * 这个方法只取入库和出库两个节点
+     *
      * @param in
      * @return
      */
     @Override
-    public OrderBill convert(NeomanResponseBody in) throws NeomanException{
+    public OrderBill convert(NeomanResponseBody in) throws NeomanException {
         if (!in.isSuccess()) return null;
         List<TrackDataBean> trackDataBeans = in.getInfo().getTrackData();
         List<OrderBill.InfoNode> result = new ArrayList<>(2);
@@ -50,9 +51,11 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
             try {
                 TrackDataBean two = trackDataBeans.get(1);
                 result.add(innerConvert(two));
-            } catch (Exception ignored) {}
-        } catch (Exception ignored) {}
-        OrderBill doc=new OrderBill();
+            } catch (Exception ignored) {
+            }
+        } catch (Exception ignored) {
+        }
+        OrderBill doc = new OrderBill();
         doc.setScans(result);
         return doc;
     }
@@ -67,7 +70,10 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
         item.setStatus(findMapping(trackData.getInfo()));
         item.setDate(DateUtils.parse(formatter.get(), trackData.getDateTime()));
         item.setPlace(trackData.getPlace());
-        item.setInfo(trackData.getInfo());
+        String info = trackData.getInfo();
+        if (info.matches("The electrolic infomation has been received on.*"))
+            item.setInfo("The electrolic infomation has been received on");
+        item.setInfo("");
         return item;
     }
 

@@ -1,22 +1,14 @@
 package com.cni.config;
 
-import com.cni.dao.OrderBillDao;
-import com.cni.dao.OrderBillDaoImpl;
-import com.cni.dao.StateMappingDao;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mongodb.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoCredential;
+import com.mongodb.ServerAddress;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.util.StringUtils;
 
 import java.util.Collections;
@@ -26,7 +18,6 @@ import java.util.List;
  * 数据源配置
  */
 
-@ConditionalOnMissingBean({MongoTemplate.class})
 @Configuration
 public class DataSourceConfiguration {
     @Value("${spring.data.mongodb.host:localhost}")

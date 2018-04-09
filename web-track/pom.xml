@@ -35,14 +35,19 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>com.cni</groupId>
             <artifactId>cni-track-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/../track-core/pom.xml</systemPath>
         </dependency>
     </dependencies>
 
@@ -54,6 +59,5 @@
             </plugin>
         </plugins>
     </build>
-
 
 </project>

@@ -31,7 +31,7 @@ public class CniCoreTrackController {
         try {
             if (StringUtils.isEmpty(awb))
                 return CommonResponseBody.error("400", "请输入单号");
-            List<String> nums = new ArrayList<>(Arrays.asList(StringUtils.split(awb, ",")));
+            List<String> nums = new ArrayList<>(Arrays.asList(awb.split(",")));
             if (CollectionUtils.isEmpty(nums))
                 return CommonResponseBody.error("400", "请输入单号");
             List<OrderBill> results = trackService.trackOrders(nums);

@@ -45,7 +45,6 @@ public class TrackService {
      * 先从数据库查询
      * 查不到的就主动追踪单号
      * 合并结果返回
-     *
      * @param numbers 单号
      * @return 查询结果
      */
@@ -64,7 +63,6 @@ public class TrackService {
         if (CollectionUtils.isEmpty(numbers))
             return redisHit;
 
-
         List<OrderBill> mongodbHit = orderBillDao.findById(numbers);
         List<String> mongodbHitNum = mongodbHit.stream()
                 .filter(Objects::nonNull)
@@ -76,11 +74,9 @@ public class TrackService {
         if (CollectionUtils.isEmpty(numbers))
             return mongodbHit;
 
-
         List<OrderBill> trackRes = orderTracker.startTrackRet(numbers);
         List<String> trackNums=trackRes.stream().map(OrderBill::getNumber).collect(Collectors.toList());
         log.warn("网络查单" + trackNums);
-
 
         trackRes.addAll(mongodbHit);
         trackRes.forEach(track -> vp.set(track.getNumber(), track));

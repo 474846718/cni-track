@@ -10,5 +10,4 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 
 @Configuration
 @EnableMongoRepositories("com.cni.dao")
-@ConditionalOnMissingBean({OrderBillDao.class})
 public class DaoConfiguration {}
