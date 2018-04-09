@@ -6,7 +6,11 @@
     <groupId>com.cni</groupId>
     <artifactId>cni-web-track</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
+    <!--父级模块-->
+    <modules>
+        <module>../track-core</module>
+    </modules>
 
     <name>web-track</name>
     <description>web查单微服务</description>
@@ -43,11 +47,16 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.47</version>
+        </dependency>
+
+        <!--自定义模块依赖-->
+        <dependency>
             <groupId>com.cni</groupId>
             <artifactId>cni-track-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/../track-core/pom.xml</systemPath>
         </dependency>
 
     </dependencies>

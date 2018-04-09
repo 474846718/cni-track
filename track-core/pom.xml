@@ -11,6 +11,7 @@
     <name>track-core</name>
     <description>查单核心库</description>
 
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
