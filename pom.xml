@@ -5,7 +5,7 @@
     <groupId>com.cni</groupId>
     <artifactId>cni-track</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <name>cni-track</name>
     <description>track项目的主模块-无代码</description>
