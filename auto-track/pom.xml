@@ -6,11 +6,7 @@
     <groupId>com.cni</groupId>
     <artifactId>cni-auto-track</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
-    <!--父级模块-->
-    <modules>
-        <module>../track-core</module>
-    </modules>
+    <packaging>jar</packaging>
 
     <name>auto-track</name>
     <description>自动查单微服务</description>
@@ -18,7 +14,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>1.5.10.RELEASE</version>
+        <version>1.5.11.RELEASE</version>
         <relativePath/>
     </parent>
 
@@ -58,8 +54,8 @@
             <artifactId>cni-track-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
-    </dependencies>
 
+    </dependencies>
 
     <build>
         <plugins>
@@ -69,6 +65,5 @@
             </plugin>
         </plugins>
     </build>
-
 
 </project>

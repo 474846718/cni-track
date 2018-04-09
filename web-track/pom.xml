@@ -6,11 +6,9 @@
     <groupId>com.cni</groupId>
     <artifactId>cni-web-track</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
+
     <!--父级模块-->
-    <modules>
-        <module>../track-core</module>
-    </modules>
 
     <name>web-track</name>
     <description>web查单微服务</description>
@@ -58,7 +56,6 @@
             <artifactId>cni-track-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
-
     </dependencies>
 
     <build>

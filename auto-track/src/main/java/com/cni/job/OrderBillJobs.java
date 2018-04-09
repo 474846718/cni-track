@@ -8,8 +8,14 @@ import com.cni.dao.repository.OverOrderBillDao;
 import com.cni.httptrack.OrderTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.Assert;
 
+import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -24,6 +30,7 @@ public class OrderBillJobs {
     private OrderBillDao orderBillDao;
     private OverOrderBillDao overOrderBillDao;
     private OrderTracker orderTracker;
+    private File file;
 
     public OrderBillDao getOrderBillDao() {
         return orderBillDao;
@@ -73,10 +80,11 @@ public class OrderBillJobs {
         logger.warn("===开始检查超时运单===");
         List<String> expired = orderBillDao.findExpirdOrderBill();
         logger.warn("记录总数：" + expired.size());
-        //todo 写入文件
+
         orderBillDao.removeOrderBill(expired);
         logger.warn("===结束检查超时运单===");
     }
+
 
     /**
      * 追踪活跃表的运单
@@ -87,7 +95,26 @@ public class OrderBillJobs {
         List<OrderBill> orderBills = orderBillDao.findAllOnTrack();
         logger.warn("记录总数：" + orderBills.size());
         List<String> orderNums = orderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+        if (Objects.nonNull(file)) {
+            try {
+                FileWriter writer = new FileWriter(file, true);
+                for (String num : orderNums)
+                    writer.write(num);
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         orderTracker.startTrack(orderNums);
         logger.warn("===结束查询活跃表未完成运单===");
+    }
+
+    @PostConstruct
+    public void postConstruct() throws IOException {
+        if (!"Windows 10".equals(System.getProperty("os.name"))) {
+            file = new File("/root/expiredOrder.txt");
+            if (!file.exists())
+                Assert.isTrue(file.createNewFile(), "创建文件失败！");
+        }
     }
 }
