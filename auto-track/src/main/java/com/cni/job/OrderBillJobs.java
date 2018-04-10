@@ -4,7 +4,7 @@ package com.cni.job;
 import com.cni.dao.OrderBillDao;
 import com.cni.dao.entity.OrderBill;
 import com.cni.dao.entity.OverOrderBill;
-import com.cni.dao.repository.OverOrderBillDao;
+import com.cni.dao.OverOrderBillDao;
 import com.cni.httptrack.OrderTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,11 +63,22 @@ public class OrderBillJobs {
      */
     public synchronized void restoreOverOrders() {
         logger.warn("===开始归档活跃表===");
+        //获取活跃表记录
         List<OrderBill> restoreOrderBills = orderBillDao.findOverOrderBill();
         logger.warn("记录总数：" + restoreOrderBills.size());
-        List<OverOrderBill> overOrderBills = restoreOrderBills.stream().map(OverOrderBill::new).collect(Collectors.toList());
-        overOrderBillDao.insert(overOrderBills);//todo 要做按最新日期更新
-        List<String> restoreNums = restoreOrderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+        //插入归档表记录
+        List<OverOrderBill> overOrderBills = restoreOrderBills.stream()
+                .map(OverOrderBill::new)
+                .collect(Collectors.toList());
+        List<String> storedNums=overOrderBillDao.findByLatestInfoNodeDate(overOrderBills);
+        List<OverOrderBill> toInsert=overOrderBills.stream()
+                .filter(restore->!storedNums.contains(restore.getNumber()))
+                .collect(Collectors.toList());
+        overOrderBillDao.insert(toInsert);
+        //删除活跃表记录
+        List<String> restoreNums = restoreOrderBills.stream()
+                .map(OrderBill::getNumber)
+                .collect(Collectors.toList());
         orderBillDao.removeOrderBill(restoreNums);
         logger.warn("===结束归档活跃表===");
     }

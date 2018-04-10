@@ -3,7 +3,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.cni</groupId>
     <artifactId>cni-track-core</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -11,12 +10,10 @@
     <name>track-core</name>
     <description>查单核心库</description>
 
-
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>1.5.11.RELEASE</version>
-        <relativePath/>
     </parent>
 
     <properties>

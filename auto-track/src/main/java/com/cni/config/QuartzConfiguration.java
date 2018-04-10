@@ -2,10 +2,9 @@ package com.cni.config;
 
 import com.cni.dao.OrderBillDao;
 
-import com.cni.dao.repository.OverOrderBillDao;
+import com.cni.dao.OverOrderBillDao;
 import com.cni.httptrack.OrderTracker;
 import com.cni.job.OrderBillJobs;
-import com.cni.matcher.Matchers;
 import org.quartz.JobDetail;
 import org.quartz.Trigger;
 import org.springframework.beans.BeansException;
@@ -101,7 +100,7 @@ public class QuartzConfiguration implements ApplicationContextAware {
         factoryBean.setJobDetail(autoTrackOrders);
         factoryBean.setRepeatInterval(1000L * 60 * 60); //毫秒
         factoryBean.setPriority(1);
-        factoryBean.setStartDelay(1000L * 60 * 5); //五分钟后开始执行
+//        factoryBean.setStartDelay(1000L * 60); //1分钟后开始执行
         return factoryBean;
     }
 

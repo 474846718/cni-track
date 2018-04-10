@@ -6,6 +6,7 @@ import com.cni.httptrack.OrderTracker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.MethodInvokingFactoryBean;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -73,6 +74,7 @@ public class TrackService {
         mongodbHit.addAll(redisHit);
         if (CollectionUtils.isEmpty(numbers))
             return mongodbHit;
+
 
         List<OrderBill> trackRes = orderTracker.startTrackRet(numbers);
         List<String> trackNums=trackRes.stream()
