@@ -8,18 +8,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 
-public interface OverOrderBillDao  {
+public interface OverOrderBillDao {
 
     /**
      * 通过参数找出归档表已经存在的单号
      */
-    List<String> findByLatestInfoNodeDate(List<OverOrderBill> overOrderBills);
-
-    /**
-     * 插入所有
-     * @param overOrderBills 归档运单实体
-     * @return
-     */
-    void insert(List<OverOrderBill> overOrderBills);
+    void upsertLatestInfoNodeDate(List<OverOrderBill> overOrderBills);
 }
 

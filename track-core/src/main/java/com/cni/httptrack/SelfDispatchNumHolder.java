@@ -6,12 +6,15 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
+import org.springframework.util.StreamUtils;
 
 import javax.annotation.PostConstruct;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 负责持有自拍送的单号
@@ -75,6 +78,7 @@ public class SelfDispatchNumHolder{
             if (!file.exists())
                 Assert.isTrue(resource.getFile().createNewFile(),"文件创建失败");
             Assert.notNull(file, "文件对象引用不能为空！");
+
             BufferedReader reader = new BufferedReader(new FileReader(file));
             setOrderNums(reader.lines().collect(Collectors.toSet()));
             reader.close();

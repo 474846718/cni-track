@@ -14,12 +14,11 @@ import java.util.stream.Collectors;
 @Document
 public class OverOrderBill implements Serializable {
 
-
+    @Id
     private ObjectId _id;
     //归档时间
     private Date archiveTime;
     //以下都是TrackOrderDocument的属性
-    @Id
     private String number;
     private String origin;
     private String destination;
@@ -40,37 +39,35 @@ public class OverOrderBill implements Serializable {
     private String exceptionDetail;
     private List<InfoNode> infoNodes = new ArrayList<>();
 
-    public OverOrderBill() {}
-
     public OverOrderBill(OrderBill orderBill) {
         //保护性拷贝
         OrderBill copy;
         try {
-            copy=(OrderBill) orderBill.clone();
+            copy = (OrderBill) orderBill.clone();
         } catch (CloneNotSupportedException e) {
             e.printStackTrace();
             System.err.println("创建对象失败，克隆失败");
             return;
         }
-        archiveTime= new Date();
-        number=copy.getNumber();
-        origin=copy.getOrigin();
-        destination=copy.getDestination();
-        estimatedDate=copy.getEstimatedDate();
-        customer=copy.getCustomer();
-        consignee=copy.getConsignee();
-        consigneeTelNo=copy.getConsigneeTelNo();
-        receiveBy=copy.getReceiveBy();
-        headCompany=copy.getHeadCompany();
-        tailCompany=copy.getTailCompany();
-        referenceNo=copy.getReferenceNo();
-        packageType=copy.getPackageType();
-        weight=copy.getWeight();
-        flow=copy.getFlow();
-        flowDirection=copy.getFlowDirection();
-        dispatchCount=copy.getDispatchCount();
-        exception=copy.getException();
-        exceptionDetail=copy.getExceptionDetail();
+        archiveTime = new Date();
+        number = copy.getNumber();
+        origin = copy.getOrigin();
+        destination = copy.getDestination();
+        estimatedDate = copy.getEstimatedDate();
+        customer = copy.getCustomer();
+        consignee = copy.getConsignee();
+        consigneeTelNo = copy.getConsigneeTelNo();
+        receiveBy = copy.getReceiveBy();
+        headCompany = copy.getHeadCompany();
+        tailCompany = copy.getTailCompany();
+        referenceNo = copy.getReferenceNo();
+        packageType = copy.getPackageType();
+        weight = copy.getWeight();
+        flow = copy.getFlow();
+        flowDirection = copy.getFlowDirection();
+        dispatchCount = copy.getDispatchCount();
+        exception = copy.getException();
+        exceptionDetail = copy.getExceptionDetail();
         infoNodes = copy.getScans().stream()
                 .map(infoNode -> {
                     InfoNode infoNode1 = new InfoNode();
@@ -293,13 +290,13 @@ public class OverOrderBill implements Serializable {
          */
 
 
-
         private String place;
         private Long date;
         private String status;
         private String info;
 
-        public InfoNode(){}
+        public InfoNode() {
+        }
 
         public InfoNode(String place, Long date, String status, String info) {
             this.place = place;

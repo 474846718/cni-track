@@ -2,6 +2,7 @@ package com.cni.job;
 
 
 import com.cni.dao.OrderBillDao;
+import com.cni.dao.OrderBillDaoImpl;
 import com.cni.dao.entity.OrderBill;
 import com.cni.dao.entity.OverOrderBill;
 import com.cni.dao.OverOrderBillDao;
@@ -9,11 +10,12 @@ import com.cni.httptrack.OrderTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
+import org.springframework.util.StreamUtils;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -64,17 +66,15 @@ public class OrderBillJobs {
     public synchronized void restoreOverOrders() {
         logger.warn("===开始归档活跃表===");
         //获取活跃表记录
-        List<OrderBill> restoreOrderBills = orderBillDao.findOverOrderBill();
+        List<OrderBill> restoreOrderBills = orderBillDao.findOverOrderBill(0, 1000);
         logger.warn("记录总数：" + restoreOrderBills.size());
         //插入归档表记录
         List<OverOrderBill> overOrderBills = restoreOrderBills.stream()
                 .map(OverOrderBill::new)
                 .collect(Collectors.toList());
-        List<String> storedNums=overOrderBillDao.findByLatestInfoNodeDate(overOrderBills);
-        List<OverOrderBill> toInsert=overOrderBills.stream()
-                .filter(restore->!storedNums.contains(restore.getNumber()))
-                .collect(Collectors.toList());
-        overOrderBillDao.insert(toInsert);
+
+        overOrderBillDao.upsertLatestInfoNodeDate(overOrderBills);
+
         //删除活跃表记录
         List<String> restoreNums = restoreOrderBills.stream()
                 .map(OrderBill::getNumber)
@@ -87,12 +87,16 @@ public class OrderBillJobs {
      * 获取长时间无更新运单
      * 并且取消追踪
      */
-    public synchronized void checkExpiredOrders() {
+    public synchronized void checkExpiredOrders() throws IOException {
         logger.warn("===开始检查超时运单===");
         List<String> expired = orderBillDao.findExpirdOrderBill();
+        if (Objects.nonNull(file)) {
+            String mergeStr = StringUtils.collectionToDelimitedString(expired, "\n");
+            StreamUtils.copy(mergeStr, Charset.defaultCharset(), new FileOutputStream(file));
+        }
         logger.warn("记录总数：" + expired.size());
-
         orderBillDao.removeOrderBill(expired);
+
         logger.warn("===结束检查超时运单===");
     }
 
@@ -105,17 +109,9 @@ public class OrderBillJobs {
         logger.warn("===开始查询活跃表未完成运单===");
         List<OrderBill> orderBills = orderBillDao.findAllOnTrack();
         logger.warn("记录总数：" + orderBills.size());
-        List<String> orderNums = orderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
-        if (Objects.nonNull(file)) {
-            try {
-                FileWriter writer = new FileWriter(file, true);
-                for (String num : orderNums)
-                    writer.write(num);
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        List<String> orderNums = orderBills.stream()
+                .map(OrderBill::getNumber)
+                .collect(Collectors.toList());
         orderTracker.startTrack(orderNums);
         logger.warn("===结束查询活跃表未完成运单===");
     }

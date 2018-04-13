@@ -15,11 +15,15 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Repository
 public class OrderBillDaoImpl implements OrderBillDao {
+
+    public static final String DELIVERED_COLLECTION = "deliveredOrderBill";
+    public static final String ORDERBILL = "orderBill";
 
     @Value("${pageContentSize:1000}")
     private int pageContentSize = 1000;
@@ -40,32 +44,20 @@ public class OrderBillDaoImpl implements OrderBillDao {
     public void upsert(OrderBill orderBill) {
         Query query = new Query(Criteria.where("_id").is(orderBill.getNumber()));
         Update update = Update.fromDBObject(BasicDBObject.parse(JSON.toJSONString(orderBill)));
-        mongoTemplate.upsert(query, update, OrderBill.class);
+        if (1 <= orderBill.getScans().size()) {
+            String latestStatus = orderBill.getScans().get(0).getStatus();
+            String collectionName = "Delivered".equals(latestStatus) ? DELIVERED_COLLECTION : ORDERBILL;
+            mongoTemplate.upsert(query, update, OrderBill.class, collectionName);
+        }
     }
 
     @Override
     public List<OrderBill> findById(List<String> ids) {
         Criteria criteria = Criteria.where("_id").in(ids);
-        Query query=new Query(criteria);
+        Query query = new Query(criteria);
         return mongoTemplate.find(query, OrderBill.class);
     }
 
-    /**
-     * 获取所有单号
-     *
-     * @return 单号
-     */
-    @Override
-    public List<String> findAllNumber() {
-        BasicDBObject fieldsObject = new BasicDBObject();
-        fieldsObject.append("_id", true);
-        Query query = new BasicQuery(new BasicDBObject(), fieldsObject);
-        List<OrderBill> all = mongoTemplate.find(query, OrderBill.class);
-        return all.stream()
-                .map(OrderBill::getNumber)
-                .distinct()
-                .collect(Collectors.toList());
-    }
 
     /**
      * 查询所有在追踪的单号
@@ -79,21 +71,18 @@ public class OrderBillDaoImpl implements OrderBillDao {
         fieldsObject.append("_id", true);
         fieldsObject.append("tailCompany", true);
         Query query = new BasicQuery(new BasicDBObject(), fieldsObject);
-        query.addCriteria(Criteria.where("scans.0.status").nin(ACCOMPLISH_STATE));
+//        query.addCriteria(Criteria.where("scans.0.status").nin(ACCOMPLISH_STATE));
         return mongoTemplate.find(query, OrderBill.class);
     }
 
-    @Override
-    public List<OrderBill> findFirstScnasDateByNumbers(List<String> nums) {
-        BasicDBObject fieldsObject = new BasicDBObject();
-        fieldsObject.put("scans.date", true);
-        BasicQuery basicQuery = new BasicQuery(new BasicDBObject(), fieldsObject);
-        basicQuery.addCriteria(Criteria.where("_id").in(nums));
-        return mongoTemplate.find(basicQuery, OrderBill.class);
-    }
 
+    /**
+     * 查找所有完结表超过一个月的
+     *
+     * @return
+     */
     @Override
-    public List<OrderBill> findOverOrderBill() {
+    public List<OrderBill> findOverOrderBill(int page, int pagesize) {
         LocalDateTime deadLine = LocalDateTime.now().plusDays(-accomplishOver);
         Long longTimeStamp = deadLine.atZone(ZoneId.systemDefault()) //accomplishOver天数之前的时间戳
                 .toInstant()
@@ -103,43 +92,41 @@ public class OrderBillDaoImpl implements OrderBillDao {
                 .and("scans.0.date").lte(longTimeStamp);
 
         Query query = new Query(criteria);
-        long count = mongoTemplate.count(query, OrderBill.class);
-        System.out.println("查询到总数：" + count);
-
-        //分页计算
-        long page = count / pageContentSize;
-        page = count % pageContentSize > 0 ? page + 1 : page;
-
-        List<OrderBill> orderBills = new ArrayList<>();
-        for (int i = 0; i < page; i++) {
-            query.skip(i * pageContentSize).limit(pageContentSize);
-            List<OrderBill> pageContent = mongoTemplate.find(query, OrderBill.class);
-            System.out.println("第" + i + "页");
-            orderBills.addAll(pageContent);
-        }
-        return orderBills;
+        query.skip(page * pagesize).limit(pagesize);
+        return mongoTemplate.find(query, OrderBill.class, DELIVERED_COLLECTION);
     }
 
+    /**
+     * @param orderNums 删除所有单号
+     */
     @Override
     public void removeOrderBill(List<String> orderNums) {
         Query query = new Query(Criteria.where("_id").in(orderNums));
         mongoTemplate.remove(query, OrderBill.class);
+        mongoTemplate.remove(query, OrderBill.class, DELIVERED_COLLECTION);
     }
 
+    /**
+     * 查找超时运单号
+     */
     @Override
     public List<String> findExpirdOrderBill() {
         LocalDateTime deadLine = LocalDateTime.now().plusDays(-longTimeNoUpdateOver);
         Long longTimeStamp = deadLine.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
         BasicDBObject fieldsObject = new BasicDBObject();
         fieldsObject.put("_id", true);
+
         //只返回指定字段
         BasicQuery basicQuery = new BasicQuery(new BasicDBObject(), fieldsObject);
-
-
-        basicQuery.addCriteria(Criteria.where("scans.0.status").nin(ACCOMPLISH_STATE)
-                .and("scans.0.date").lte(longTimeStamp));
+        Criteria criteria = Criteria.where("scans.0.status").
+                nin(ACCOMPLISH_STATE).
+                and("scans.0.date").
+                lte(longTimeStamp);
+        basicQuery.addCriteria(criteria);
 
         List<OrderBill> orderBills = mongoTemplate.find(basicQuery, OrderBill.class);
-        return orderBills.stream().map(OrderBill::getNumber).collect(Collectors.toList());
+        return orderBills.stream()
+                .map(OrderBill::getNumber)
+                .collect(Collectors.toList());
     }
 }
