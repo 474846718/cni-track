@@ -2,9 +2,8 @@ package com.cni.job;
 
 
 import com.cni.dao.OrderBillDao;
-import com.cni.dao.OrderBillDaoImpl;
-import com.cni.dao.entity.OrderBill;
-import com.cni.dao.entity.OverOrderBill;
+import com.cni.dao.entity.Waybill;
+import com.cni.dao.entity.ArchiveWaybill;
 import com.cni.dao.OverOrderBillDao;
 import com.cni.httptrack.OrderTracker;
 import org.slf4j.Logger;
@@ -66,18 +65,18 @@ public class OrderBillJobs {
     public synchronized void restoreOverOrders() {
         logger.warn("===开始归档活跃表===");
         //获取活跃表记录
-        List<OrderBill> restoreOrderBills = orderBillDao.findOverOrderBill(0, 1000);
-        logger.warn("记录总数：" + restoreOrderBills.size());
+        List<Waybill> restoreWaybills = orderBillDao.findOverOrderBill(0, 1000);
+        logger.warn("记录总数：" + restoreWaybills.size());
         //插入归档表记录
-        List<OverOrderBill> overOrderBills = restoreOrderBills.stream()
-                .map(OverOrderBill::new)
+        List<ArchiveWaybill> archiveWaybills = restoreWaybills.stream()
+                .map(ArchiveWaybill::new)
                 .collect(Collectors.toList());
 
-        overOrderBillDao.upsertLatestInfoNodeDate(overOrderBills);
+        overOrderBillDao.upsertLatestInfoNodeDate(archiveWaybills);
 
         //删除活跃表记录
-        List<String> restoreNums = restoreOrderBills.stream()
-                .map(OrderBill::getNumber)
+        List<String> restoreNums = restoreWaybills.stream()
+                .map(Waybill::getNumber)
                 .collect(Collectors.toList());
         orderBillDao.removeOrderBill(restoreNums);
         logger.warn("===结束归档活跃表===");
@@ -107,10 +106,10 @@ public class OrderBillJobs {
     public synchronized void autoTrackOrders() {
         //获取实体对象 分组
         logger.warn("===开始查询活跃表未完成运单===");
-        List<OrderBill> orderBills = orderBillDao.findAllOnTrack();
-        logger.warn("记录总数：" + orderBills.size());
-        List<String> orderNums = orderBills.stream()
-                .map(OrderBill::getNumber)
+        List<Waybill> waybills = orderBillDao.findAllOnTrack();
+        logger.warn("记录总数：" + waybills.size());
+        List<String> orderNums = waybills.stream()
+                .map(Waybill::getNumber)
                 .collect(Collectors.toList());
         orderTracker.startTrack(orderNums);
         logger.warn("===结束查询活跃表未完成运单===");

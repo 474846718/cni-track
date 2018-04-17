@@ -4,7 +4,7 @@ import com.cni.converter.support.ConvertUtils;
 import com.cni.converter.support.InfoNodeAdpt;
 import com.cni.converter.support.MappingFinder;
 import com.cni.converter.support.OrderBillAdpt;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.httptrack.resp.NeomanResponseBody;
@@ -60,7 +60,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
     }
 
     @Override
-    public OrderBill convert(NeomanResponseBody in) throws OrderNotFoundException, ConvertException {
+    public Waybill convert(NeomanResponseBody in) throws OrderNotFoundException, ConvertException {
 
         if (ObjectUtils.isEmpty(in) || !in.isSuccess()
                 || ObjectUtils.isEmpty(in.getInfo())
@@ -69,7 +69,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
 
         NeomanResponseBody.InfoBean.EmsInfoBean emsInfoBean = in.getInfo().getEmsInfo();
         List<TrackDataBean> trackDataBeans = in.getInfo().getTrackData();
-        OrderBill doc = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+        Waybill doc = ConvertUtils.createOrderBill(new OrderBillAdpt() {
             @Override
             public String getNumber() {
                 return emsInfoBean.getNumber();
@@ -151,7 +151,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
             }
         });
         Pattern pattern = Pattern.compile("\\[.*]");
-        List<OrderBill.InfoNode> myInfoNodes = trackDataBeans.stream()
+        List<Waybill.SavePoint> mySavePoints = trackDataBeans.stream()
                 .map(trackData -> {
                     String subString = pattern.matcher(trackData.getInfo()).replaceAll("");
                     MapResult result = finder.findMapping(subString, doc.getFlow());
@@ -179,15 +179,15 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
                     });
                 })
                 .filter(Objects::nonNull)
-                .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
+                .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                 .collect(Collectors.toList());
 // 去除入库节点前的地点信息
-        int index = findCheckInScanIdx(myInfoNodes);
+        int index = findCheckInScanIdx(mySavePoints);
         if (index > -1)
-            myInfoNodes.stream()
+            mySavePoints.stream()
                     .skip(index + 1)
                     .forEach(scan -> scan.setPlace(""));
-        doc.setScans(myInfoNodes);
+        doc.setSavePoints(mySavePoints);
         return doc;
     }
 
@@ -197,7 +197,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
      *
      * @return 返回索引位置找不到返回-1
      */
-    private int findCheckInScanIdx(List<OrderBill.InfoNode> scans) {
+    private int findCheckInScanIdx(List<Waybill.SavePoint> scans) {
         for (int i = scans.size() - 1; i > -1; i--) {
             String status = scans.get(i).getStatus();
             if (!StringUtils.isEmpty(status) && status.equalsIgnoreCase("Check In Scan"))

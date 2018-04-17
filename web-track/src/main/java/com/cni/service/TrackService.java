@@ -1,20 +1,16 @@
 package com.cni.service;
 
 import com.cni.dao.OrderBillDao;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.httptrack.OrderTracker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.config.MethodInvokingFactoryBean;
-import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -27,16 +23,16 @@ import java.util.stream.Collectors;
 @Service
 public class TrackService {
 
-    private static final Log log = LogFactory.getLog(OrderBill.class);
+    private static final Log log = LogFactory.getLog(Waybill.class);
     private OrderTracker orderTracker;
     private OrderBillDao orderBillDao;
-    private RedisTemplate<String, OrderBill> redisTemplate;
+    private RedisTemplate<String, Waybill> redisTemplate;
 
 
     @Autowired
     public TrackService(OrderTracker orderTracker,
                         OrderBillDao orderBillDao,
-                        RedisTemplate<String, OrderBill> redisTemplate) {
+                        RedisTemplate<String, Waybill> redisTemplate) {
         this.orderTracker = orderTracker;
         this.orderBillDao = orderBillDao;
         this.redisTemplate = redisTemplate;
@@ -49,25 +45,25 @@ public class TrackService {
      * @param numbers 单号
      * @return 查询结果
      */
-    public List<OrderBill> trackOrders(List<String> numbers) {
-        ValueOperations<String, OrderBill> vp = redisTemplate.opsForValue();
-        List<OrderBill> redisHit = numbers.stream()
+    public List<Waybill> trackOrders(List<String> numbers) {
+        ValueOperations<String, Waybill> vp = redisTemplate.opsForValue();
+        List<Waybill> redisHit = numbers.stream()
                 .map(vp::get)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
         List<String> redisHitNum = redisHit.stream()
-                .map(OrderBill::getNumber)
+                .map(Waybill::getNumber)
                 .collect(Collectors.toList());
         log.warn("redis命中" + redisHitNum);
         numbers.removeAll(redisHitNum);
         if (CollectionUtils.isEmpty(numbers))
             return redisHit;
 
-        List<OrderBill> mongodbHit = orderBillDao.findById(numbers);
+        List<Waybill> mongodbHit = orderBillDao.findById(numbers);
         List<String> mongodbHitNum = mongodbHit.stream()
                 .filter(Objects::nonNull)
-                .map(OrderBill::getNumber)
+                .map(Waybill::getNumber)
                 .collect(Collectors.toList());
         log.warn("mongodb命中" + mongodbHitNum);
         numbers.removeAll(mongodbHitNum);
@@ -76,10 +72,10 @@ public class TrackService {
             return mongodbHit;
 
 
-        List<OrderBill> trackRes = orderTracker.startTrackRet(numbers);
+        List<Waybill> trackRes = orderTracker.startTrackRet(numbers);
         List<String> trackNums=trackRes.stream()
                 .filter(Objects::nonNull)
-                .map(OrderBill::getNumber)
+                .map(Waybill::getNumber)
                 .collect(Collectors.toList());
         log.warn("网络查单" + trackNums);
 

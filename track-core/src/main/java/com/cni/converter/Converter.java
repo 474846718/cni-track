@@ -1,6 +1,6 @@
 package com.cni.converter;
 
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.matcher.OrderNumMatcher;
@@ -32,11 +32,11 @@ public interface Converter<T> {
 
     /**
      * @param in 输入要被转换的对象
-     * @return OrderBill
+     * @return Waybill
      * @throws OrderNotFoundException 查无此单
      * @throws ConvertException       转换时发生异常
      */
-    OrderBill convert(T in) throws OrderNotFoundException, ConvertException;
+    Waybill convert(T in) throws OrderNotFoundException, ConvertException;
 
 
     /**

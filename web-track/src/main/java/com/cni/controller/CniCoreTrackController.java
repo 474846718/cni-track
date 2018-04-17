@@ -1,6 +1,6 @@
 package com.cni.controller;
 
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.httptrack.resp.CommonResponseBody;
 import com.cni.service.TrackService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +34,7 @@ public class CniCoreTrackController {
             List<String> nums = new ArrayList<>(Arrays.asList(awb.split(",")));
             if (CollectionUtils.isEmpty(nums))
                 return CommonResponseBody.error("400", "请输入单号");
-            List<OrderBill> results = trackService.trackOrders(nums);
+            List<Waybill> results = trackService.trackOrders(nums);
             return CollectionUtils.isEmpty(results) ? CommonResponseBody.error("400", "列表为空", results) : CommonResponseBody.success("查询完成", results);
         } catch (Exception e) {
             e.printStackTrace();

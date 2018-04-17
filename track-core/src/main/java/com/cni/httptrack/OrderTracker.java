@@ -5,8 +5,11 @@ import com.cni.converter.Converter;
 import com.cni.converter.DelhiveryConverter;
 import com.cni.converter.NeomanConverter2;
 import com.cni.converter.support.NeomanJoint;
+import com.cni.dao.CompleteWaybillRepository;
+import com.cni.dao.OntrackWaybillRepository;
 import com.cni.dao.OrderBillDao;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.OntrackWaybill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.NeomanException;
 import com.cni.exception.OrderNotFoundException;
@@ -15,8 +18,10 @@ import com.cni.matcher.Matchers;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ReflectionUtils;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
@@ -33,8 +38,9 @@ import java.util.stream.Collectors;
  * 使用渠道类进行追踪
  * 提供redis缓存和mongodb持久化功能
  */
+@Component
 public class OrderTracker {
-    private static final Logger log = LoggerFactory.getLogger(OrderTracker.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(OrderTracker.class);
 
     private NeomanJoint neomanJoint;
     private OkHttpClient client;
@@ -43,7 +49,8 @@ public class OrderTracker {
     private int port;
     private String version;
     private HttpUrl baseUrl;
-    private OrderBillDao orderBillDao;
+    private CompleteWaybillRepository completeWaybillRepository;
+    private OntrackWaybillRepository ontrackWaybillRepository;
     private SelfDispatchNumHolder selfDispatchNumHolder;
     private Matchers matchers;
 
@@ -88,12 +95,20 @@ public class OrderTracker {
         this.version = version;
     }
 
-    public OrderBillDao getOrderBillDao() {
-        return orderBillDao;
+    public CompleteWaybillRepository getCompleteWaybillRepository() {
+        return completeWaybillRepository;
     }
 
-    public void setOrderBillDao(OrderBillDao orderBillDao) {
-        this.orderBillDao = orderBillDao;
+    public void setCompleteWaybillRepository(CompleteWaybillRepository completeWaybillRepository) {
+        this.completeWaybillRepository = completeWaybillRepository;
+    }
+
+    public OntrackWaybillRepository getOntrackWaybillRepository() {
+        return ontrackWaybillRepository;
+    }
+
+    public void setOntrackWaybillRepository(OntrackWaybillRepository ontrackWaybillRepository) {
+        this.ontrackWaybillRepository = ontrackWaybillRepository;
     }
 
     public void setClient(OkHttpClient client) {
@@ -115,9 +130,8 @@ public class OrderTracker {
      *
      * @param orderNum     单号
      * @param trackChannel 查询渠道
-     * @throws Exception 查单失败 转换格式失败 纽曼系统拼单都会抛异常
      */
-    public void startTrackRet(String orderNum, BlockingQueue<OrderBill> queue, TrackChannel trackChannel) {
+    public void startTrackRet(String orderNum, BlockingQueue<Waybill> queue, TrackChannel trackChannel) {
 
 
         Assert.notNull(client, "没有提供http客户端");
@@ -130,6 +144,9 @@ public class OrderTracker {
         HttpUrl rebuildUrl = baseUrl.newBuilder().addPathSegment(trackChannel.getUrlSegment()).addQueryParameter("orderNum", orderNum).build();
         Request request = new Request.Builder().url(rebuildUrl).get().build();
         client.newCall(request).enqueue(new Callback() {
+            private
+
+
             @Override
             public void onFailure(Call call, IOException e) {
             }
@@ -141,40 +158,29 @@ public class OrderTracker {
                     Assert.notNull(responseBody, "返回值为空");
                     String res = responseBody.string();
                     Object in = JSON.parseObject(res, converter.getTypeConvertBefore());
-                    OrderBill orderBill = converter.convert(in);
+                    Waybill waybill = converter.convert(in);
+
+
 
                     try {
-                        try {
-                            orderBill = neomanJoint.mergeNeoman(orderBill);
-                        } catch (NeomanException ignored) {
-                            log.warn("钮门拼单失败：" + orderNum);
-                        }
-                        orderBillDao.upsert(orderBill);
-                        log.warn("查单成功！已存数据库：" + orderNum);
-                        queue.add(orderBill);
-//                        putRedisCache(orderNum, orderBill, 15);
+                        completeWaybillRepository.save(waybill);
+                        LOGGER.warn("查单成功！已存数据库：" + orderNum);
                     } catch (RuntimeException ignored) {
-                        log.warn("插入Mongodb失败：" + orderNum);
-                        enqueueErrorBill();
+                        LOGGER.warn("插入Mongodb失败：" + orderNum);
+                    }finally {
+                        queue.add(waybill);
                     }
                 } catch (ConvertException e) {
-                    log.warn("运单转换时出错：" + orderNum, e);
-                    enqueueErrorBill();
+                    LOGGER.warn("运单转换时出错：" + orderNum, e);
                 } catch (IOException e) {
-                    log.warn("读取渠道http响应体字符串失败:" + orderNum, e);
-                    enqueueErrorBill();
+                    LOGGER.warn("读取渠道http响应体字符串失败:" + orderNum, e);
                 } catch (OrderNotFoundException ignored) {
-                    log.warn("查无此单:" + orderNum);
-                    enqueueErrorBill();
+                    LOGGER.warn("查无此单:" + orderNum);
                 } catch (RuntimeException e) {
-                    log.warn("追踪时发生其他异常:" + orderNum, e);
-                    enqueueErrorBill();
+                    LOGGER.warn("追踪时发生其他异常:" + orderNum, e);
+                }finally {
+                    queue.add(Waybill.error(orderNum));
                 }
-            }
-
-            private void enqueueErrorBill() {
-                OrderBill orderBill = OrderBill.error(orderNum);
-                queue.add(orderBill);
             }
         });
     }
@@ -185,12 +191,12 @@ public class OrderTracker {
      *
      * @param orderNums 单号
      */
-    public List<OrderBill> startTrackRet(List<String> orderNums) {
-        BlockingQueue<OrderBill> queue = new ArrayBlockingQueue<>(orderNums.size());
+    public List<Waybill> startTrackRet(List<String> orderNums) {
+        BlockingQueue<Waybill> queue = new ArrayBlockingQueue<>(orderNums.size());
         for (String num : orderNums) {
             List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
             if (CollectionUtils.isEmpty(matchedTrackChannels))
-                queue.add(OrderBill.error(num));
+                queue.add(Waybill.error(num));
             else {
                 TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
                 startTrackRet(num, queue, trackChannel);
@@ -230,7 +236,7 @@ public class OrderTracker {
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                log.warn("请求失败", e);
+                LOGGER.warn("请求失败", e);
             }
 
             @Override
@@ -240,30 +246,23 @@ public class OrderTracker {
                     Assert.notNull(responseBody, "返回值为空");
                     String res = responseBody.string();
                     Object in = JSON.parseObject(res, converter.getTypeConvertBefore());
-                    OrderBill orderBill = converter.convert(in);
+                    Waybill waybill = converter.convert(in);
 
                     try {
-                        try {
-                            orderBill = neomanJoint.mergeNeoman(orderBill);
-                        } catch (NeomanException ignored) {
-                            log.warn("钮门拼单失败：" + orderNum);
-                        }
-                        orderBillDao.upsert(orderBill);
-                        log.warn("查单成功！已存数据库：" + orderNum);
+                        completeWaybillRepository.save(waybill);
+                        LOGGER.warn("查单成功！已存数据库：" + orderNum);
                     } catch (RuntimeException ignored) {
-                        log.warn("插入Mongodb失败：" + orderNum);
+                        LOGGER.warn("插入Mongodb失败：" + orderNum);
                     }
                 } catch (ConvertException e) {
-                    log.warn("运单转换时出错：" + orderNum, e);
+                    LOGGER.warn("运单转换时出错：" + orderNum, e);
                 } catch (IOException e) {
-                    log.warn("读取渠道http响应体字符串失败:" + orderNum, e);
+                    LOGGER.warn("读取渠道http响应体字符串失败:" + orderNum, e);
 
                 } catch (OrderNotFoundException ignored) {
-                    log.warn("查无此单:" + orderNum);
-
+                    LOGGER.warn("查无此单:" + orderNum);
                 } catch (RuntimeException e) {
-                    log.warn("追踪时发生其他异常:" + orderNum, e);
-
+                    LOGGER.warn("追踪时发生其他异常:" + orderNum, e);
                 }
             }
         });
@@ -286,17 +285,17 @@ public class OrderTracker {
      *
      * @return 运单数据
      */
-    private List<OrderBill> obtainFromQueue(BlockingQueue<OrderBill> queue, List<String> orderNums) {
-        List<OrderBill> list = new ArrayList<>(orderNums.size());
+    private List<Waybill> obtainFromQueue(BlockingQueue<Waybill> queue, List<String> orderNums) {
+        List<Waybill> list = new ArrayList<>(orderNums.size());
         try {
             for (int i = 0; i < orderNums.size(); i++)
                 list.add(queue.poll(30, TimeUnit.SECONDS));
         } catch (InterruptedException e) {
             orderNums.removeAll(list.stream()
-                    .map(OrderBill::getNumber)
+                    .map(Waybill::getNumber)
                     .collect(Collectors.toSet()));
-            log.warn("放弃剩余" + orderNums);
-            list.addAll(orderNums.stream().map(OrderBill::error).collect(Collectors.toList()));
+            LOGGER.warn("放弃剩余" + orderNums);
+            list.addAll(orderNums.stream().map(Waybill::error).collect(Collectors.toList()));
         }
         return list;
     }
@@ -318,12 +317,12 @@ public class OrderTracker {
      *
      * @param orderNum 单号
      */
-    private boolean selfDispachOnDel(String orderNum, BlockingQueue<OrderBill> queue, TrackChannel trackChannel) {
+    private boolean selfDispachOnDel(String orderNum, BlockingQueue<Waybill> queue, TrackChannel trackChannel) {
         boolean isSelfDispatch = selfDispatchNumHolder.has(orderNum);
         if (!isSelfDispatch)
             return false;
 
-        log.warn("自派件处理:" + orderNum);
+        LOGGER.warn("自派件处理:" + orderNum);
         //追踪delhivery自派件
         HttpUrl neoman = new HttpUrl.Builder().scheme("http").host("www.cnilink.com").port(9999)
                 .addPathSegment("v1.0.0").addPathSegment("neoman").addQueryParameter("orderNum", orderNum)
@@ -341,41 +340,29 @@ public class OrderTracker {
                     Assert.notNull(responseBody, "返回值为空");
                     NeomanConverter2 neomanConverter2 = new NeomanConverter2(trackChannel.getConverter().getMapConfigHolder());
                     NeomanResponseBody neomanResponseBody = JSON.parseObject(responseBody.string(), neomanConverter2.getTypeConvertBefore());
-                    OrderBill orderBill = neomanConverter2.convert(neomanResponseBody);
+                    Waybill waybill = neomanConverter2.convert(neomanResponseBody);
 
                     try {
-                        orderBillDao.upsert(orderBill);
-                        log.warn("查单成功！已存数据库：" + orderNum);
-                        queue.add(orderBill);
-//                        putRedisCache(orderNum, orderBill, 15);
+                        orderBillDao.upsert(waybill);
+                        LOGGER.warn("查单成功！已存数据库：" + orderNum);
                     } catch (RuntimeException ignored) {
-                        log.warn("插入Mongodb失败：" + orderNum);
-                        enqueueErrorBill(false);
+                        LOGGER.warn("插入Mongodb失败：" + orderNum);
+                    }finally {
+                        queue.add(waybill);
                     }
                 } catch (ConvertException e) {
-                    log.warn("运单转换时出错：" + orderNum, e);
-                    enqueueErrorBill(true);
+                    LOGGER.warn("运单转换时出错：" + orderNum, e);
                 } catch (IOException e) {
-                    log.warn("读取渠道http响应体字符串失败:" + orderNum, e);
-                    enqueueErrorBill(false);
+                    LOGGER.warn("读取渠道http响应体字符串失败:" + orderNum, e);
                 } catch (OrderNotFoundException ignored) {
-                    log.warn("查无此单:" + orderNum);
-                    enqueueErrorBill(true);
+                    LOGGER.warn("查无此单:" + orderNum);
                 } catch (RuntimeException e) {
-                    log.warn("追踪时发生其他异常:" + orderNum, e);
-                    enqueueErrorBill(false);
-                }
-            }
-
-            private void enqueueErrorBill(boolean isCache) {
-                OrderBill orderBill = OrderBill.error(orderNum);
-                queue.add(orderBill);
-                if (isCache) {
-//                    putRedisCache(orderNum, orderBill, 10);
+                    LOGGER.warn("追踪时发生其他异常:" + orderNum, e);
+                }finally {
+                    queue.add(Waybill.error(orderNum));
                 }
             }
         });
-
         return true;
     }
 }

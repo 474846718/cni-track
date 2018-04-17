@@ -1,6 +1,6 @@
 package com.cni.converter;
 
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.NeomanException;
 import com.cni.httptrack.resp.NeomanResponseBody;
 import com.cni.httptrack.resp.NeomanResponseBody.InfoBean.TrackDataBean;
@@ -41,10 +41,10 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
      * @return
      */
     @Override
-    public OrderBill convert(NeomanResponseBody in) throws NeomanException {
+    public Waybill convert(NeomanResponseBody in) throws NeomanException {
         if (!in.isSuccess()) return null;
         List<TrackDataBean> trackDataBeans = in.getInfo().getTrackData();
-        List<OrderBill.InfoNode> result = new ArrayList<>(2);
+        List<Waybill.SavePoint> result = new ArrayList<>(2);
         try {
             TrackDataBean one = trackDataBeans.get(0);
             result.add(innerConvert(one));
@@ -55,8 +55,8 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
             }
         } catch (Exception ignored) {
         }
-        OrderBill doc = new OrderBill();
-        doc.setScans(result);
+        Waybill doc = new Waybill();
+        doc.setSavePoints(result);
         return doc;
     }
 
@@ -65,8 +65,8 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
 
     }
 
-    private OrderBill.InfoNode innerConvert(NeomanResponseBody.InfoBean.TrackDataBean trackData) {
-        OrderBill.InfoNode item = new OrderBill.InfoNode();
+    private Waybill.SavePoint innerConvert(NeomanResponseBody.InfoBean.TrackDataBean trackData) {
+        Waybill.SavePoint item = new Waybill.SavePoint();
         item.setStatus(findMapping(trackData.getInfo()));
         item.setDate(DateUtils.parse(formatter.get(), trackData.getDateTime()));
         item.setPlace(trackData.getPlace());

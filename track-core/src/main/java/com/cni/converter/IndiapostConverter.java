@@ -4,7 +4,7 @@ import com.cni.converter.support.ConvertUtils;
 import com.cni.converter.support.InfoNodeAdpt;
 import com.cni.converter.support.MappingFinder;
 import com.cni.converter.support.OrderBillAdpt;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.httptrack.resp.IndiapostResponseBody;
@@ -60,7 +60,7 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
     }
 
     @Override
-    public OrderBill convert(IndiapostResponseBody in) throws OrderNotFoundException, ConvertException {
+    public Waybill convert(IndiapostResponseBody in) throws OrderNotFoundException, ConvertException {
         if (in == null || !in.isSuccess() || in.getInfo() == null || in.getInfo().getDetails() == null)
             throw new OrderNotFoundException("查无此单" + in);
         return handleBody(in);
@@ -71,10 +71,10 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
 
     }
 
-    private OrderBill handleBody(IndiapostResponseBody in) {
+    private Waybill handleBody(IndiapostResponseBody in) {
         try {
             IndiapostResponseBody.InfoBean infoBean = in.getInfo();
-            OrderBill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
 
                 @Override
                 public String getNumber() {
@@ -157,7 +157,7 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
                 }
             });
 
-            List<OrderBill.InfoNode> myInfoNodes = infoBean.getDetails().stream()
+            List<Waybill.SavePoint> mySavePoints = infoBean.getDetails().stream()
                     .map(detailsBean -> {
                         MapResult result = finder.findMapping(detailsBean.getEvent(), body.getFlow());
                         if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null;
@@ -184,9 +184,9 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
                         });
                     })
                     .filter(Objects::nonNull)
-                    .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
+                    .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setScans(myInfoNodes);
+            body.setSavePoints(mySavePoints);
             return body;
         } catch (Exception e) {
             throw new ConvertException("ind运单转换失败", e);

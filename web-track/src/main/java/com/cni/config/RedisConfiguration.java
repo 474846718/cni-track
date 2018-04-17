@@ -1,6 +1,6 @@
 package com.cni.config;
 
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,8 +14,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 public class RedisConfiguration {
     @Bean
-    public RedisTemplate<String, OrderBill> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, OrderBill> redisTemplate = new RedisTemplate<>();
+    public RedisTemplate<String, Waybill> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, Waybill> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
 
         // 使用Jackson2JsonRedisSerialize 替换默认序列化

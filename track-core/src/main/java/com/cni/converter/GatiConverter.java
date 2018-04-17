@@ -5,7 +5,7 @@ import com.cni.converter.support.ConvertUtils;
 import com.cni.converter.support.InfoNodeAdpt;
 import com.cni.converter.support.MappingFinder;
 import com.cni.converter.support.OrderBillAdpt;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.httptrack.resp.GatiResponseBody;
@@ -57,7 +57,7 @@ public class GatiConverter implements Converter<GatiResponseBody> {
     }
 
     @Override
-    public OrderBill convert(GatiResponseBody in) throws OrderNotFoundException, ConvertException {
+    public Waybill convert(GatiResponseBody in) throws OrderNotFoundException, ConvertException {
         if (ObjectUtils.isEmpty(in) || !in.isSuccess() || ObjectUtils.isEmpty(in.getInfo()) || ObjectUtils.isEmpty(in.getInfo().getList()))
             throw new OrderNotFoundException("查无此单" + JSON.toJSONString(in));
 
@@ -69,9 +69,9 @@ public class GatiConverter implements Converter<GatiResponseBody> {
 
     }
 
-    private OrderBill handleBody(ListBean listBean) {
+    private Waybill handleBody(ListBean listBean) {
         try {
-            OrderBill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
                 @Override
                 public String getNumber() {
                     return listBean.getTrackNumber();
@@ -152,7 +152,7 @@ public class GatiConverter implements Converter<GatiResponseBody> {
                     return null;
                 }
             });
-            List<OrderBill.InfoNode> infoNodes = listBean.getData().getTrackData().stream()
+            List<Waybill.SavePoint> savePoints = listBean.getData().getTrackData().stream()
                     .map(trackDataBean -> {
                         MapResult result = finder.findMapping(trackDataBean.getInfo(), body.getFlow());
                         if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null;
@@ -179,9 +179,9 @@ public class GatiConverter implements Converter<GatiResponseBody> {
                         });
                     })
                     .filter(Objects::nonNull)
-                    .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
+                    .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setScans(infoNodes);
+            body.setSavePoints(savePoints);
             return body;
         } catch (Exception e) {
             throw new ConvertException("gati运单转换失败", e);

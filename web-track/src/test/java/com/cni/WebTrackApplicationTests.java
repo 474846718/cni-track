@@ -1,6 +1,6 @@
 package com.cni;
 
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.httptrack.OrderTracker;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,7 +26,7 @@ public class WebTrackApplicationTests {
         List<String> num = new ArrayList<>();
 
         num.add("1521513493906");
-        List<OrderBill> orderBills = orderTracker.startTrackRet(num);
+        List<Waybill> waybills = orderTracker.startTrackRet(num);
         LOGGER.warn("");
     }
 

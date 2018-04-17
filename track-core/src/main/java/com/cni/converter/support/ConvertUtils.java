@@ -1,6 +1,6 @@
 package com.cni.converter.support;
 
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 
 /**
  * 封装转换过程中公用的方法
@@ -15,8 +15,8 @@ public final class ConvertUtils {
      * @param adpt
      * @return
      */
-    public static OrderBill createOrderBill(OrderBillAdpt adpt) {
-        OrderBill document = new OrderBill();
+    public static Waybill createOrderBill(OrderBillAdpt adpt) {
+        Waybill document = new Waybill();
         document.setFlowDirection(adpt.getFlowDirection());
         document.setFlow(adpt.getFlow());
         document.setDispatchCount(adpt.getDispatchCount());
@@ -43,13 +43,13 @@ public final class ConvertUtils {
      * @param adpt
      * @return
      */
-    public static OrderBill.InfoNode createInfoNode(InfoNodeAdpt adpt) {
-        OrderBill.InfoNode infoNode = new OrderBill.InfoNode();
-        infoNode.setPlace(adpt.getPlace());
-        infoNode.setDate(adpt.getDate());
-        infoNode.setStatus(adpt.getStatus());
-        infoNode.setInfo(adpt.getInfo());
-        return infoNode;
+    public static Waybill.SavePoint createInfoNode(InfoNodeAdpt adpt) {
+        Waybill.SavePoint savePoint = new Waybill.SavePoint();
+        savePoint.setPlace(adpt.getPlace());
+        savePoint.setDate(adpt.getDate());
+        savePoint.setStatus(adpt.getStatus());
+        savePoint.setInfo(adpt.getInfo());
+        return savePoint;
     }
 
 

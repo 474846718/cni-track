@@ -5,7 +5,7 @@ import com.cni.converter.support.ConvertUtils;
 import com.cni.converter.support.InfoNodeAdpt;
 import com.cni.converter.support.MappingFinder;
 import com.cni.converter.support.OrderBillAdpt;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.httptrack.resp.BluedartResponseBody;
@@ -73,7 +73,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
 
 
     @Override
-    public OrderBill convert(BluedartResponseBody in) throws OrderNotFoundException, ConvertException {
+    public Waybill convert(BluedartResponseBody in) throws OrderNotFoundException, ConvertException {
         if (ObjectUtils.isEmpty(in) || !in.isSuccess() || ObjectUtils.isEmpty(in.getInfo()))
             throw new OrderNotFoundException("查无此单" + in);
         return handleBody(in);
@@ -88,7 +88,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
      * @param in 要转换的pojo对象
      * @return 运单实体类
      */
-    private OrderBill handleBody(BluedartResponseBody in) {
+    private Waybill handleBody(BluedartResponseBody in) {
         try {
             List<ShipmentBean> shipmentBeans = in.getInfo().getShipment();
             BluedartResponseBody.InfoBean.ShipmentBean firstBean = shipmentBeans.get(0);
@@ -97,7 +97,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
             boolean isback = !StringUtils.isEmpty(refAwb);//通过识别相关单号判断是否是返程
             //TODO 拼接body
 
-            OrderBill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
 
                 @Override
                 public String getNumber() {
@@ -168,12 +168,12 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
 
                 @Override
                 public String getFlow() {
-                    return OrderBill.FLOW_FORWARD;
+                    return Waybill.FLOW_FORWARD;
                 }
 
                 @Override
                 public String getFlowDirection() {
-                    return isback ? OrderBill.FLOW_DIRECTION_RETURN : OrderBill.FLOW_DIRECTION_ONWARD;
+                    return isback ? Waybill.FLOW_DIRECTION_RETURN : Waybill.FLOW_DIRECTION_ONWARD;
                 }
 
                 @Override
@@ -188,14 +188,14 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
                 log.warn("追踪信息为空");
                 return body;
             }
-            List<OrderBill.InfoNode> result = convertScanBean(scanDetailBeanList, body.getFlow(), isback);
+            List<Waybill.SavePoint> result = convertScanBean(scanDetailBeanList, body.getFlow(), isback);
 
             if (isSplit(shipmentBeans)) {
                 BluedartResponseBody.InfoBean.ShipmentBean secondBean = shipmentBeans.get(1);
                 scanDetailBeanList = secondBean.getScans().getScanDetail();
                 result.addAll(convertScanBean(scanDetailBeanList, body.getFlow(), true));
             }
-            body.setScans(result);
+            body.setSavePoints(result);
             return body;
         } catch (Exception e) {
             throw new ConvertException("bd运单转换失败！", e);
@@ -205,7 +205,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
     /**
      * 提取ScanBean信息 并且过滤掉 Ignore状态
      */
-    private List<OrderBill.InfoNode> convertScanBean(List<ScanDetailBean> scanDetailBeans, String flow, boolean isback) {
+    private List<Waybill.SavePoint> convertScanBean(List<ScanDetailBean> scanDetailBeans, String flow, boolean isback) {
         return scanDetailBeans.stream()
                 .map(scanDetailBean -> {
                     MapResult result = finder.findMapping(scanDetailBean.getScan(), flow, isback);
@@ -233,7 +233,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
                     });
                 })
                 .filter(Objects::nonNull)
-                .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
+                .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                 .collect(Collectors.toList());
     }
 

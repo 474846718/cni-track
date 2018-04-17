@@ -1,7 +1,7 @@
 package com.cni.service;
 
 import com.alibaba.fastjson.JSON;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.statemap.MapRow;
 import com.cni.statemap.neoman.NeomanConfigHolder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +15,11 @@ import java.util.List;
 public class MappingHolderService {
 
     private final NeomanConfigHolder holder;
-    private final RedisTemplate<String, OrderBill> redisTemplate;
+    private final RedisTemplate<String, Waybill> redisTemplate;
 
     @Autowired
     public MappingHolderService(NeomanConfigHolder holder,
-                                RedisTemplate<String, OrderBill> redisTemplate) {
+                                RedisTemplate<String, Waybill> redisTemplate) {
         this.holder = holder;
         this.redisTemplate = redisTemplate;
 

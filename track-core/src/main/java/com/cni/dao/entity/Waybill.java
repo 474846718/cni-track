@@ -17,14 +17,18 @@ import java.util.stream.Collectors;
  * 运单信息实体类
  * 不要随便修改字段 否则反序列化失败
  */
-public class OrderBill implements Serializable, Cloneable {
+
+public class Waybill implements Serializable{
     public static final String FLOW_FORWARD = "FORWARD";
     public static final String FLOW_REVERSE = "REVERSE";
     public static final String FLOW_DIRECTION_ONWARD = "ONWARD";
     public static final String FLOW_DIRECTION_RETURN = "RETURN";
 
-    private static final List<String> excetions = Arrays.asList("Refuse", "Payment",
+    public static final List<String> COMPLETE_STATUS=Arrays.asList("Delivered","Delivered Return","Lost");
+    private static final List<String> EXCEPTIONS = Arrays.asList("Refuse", "Payment",
             "Address/Contact Issue", "Future Delivery", "Self Collect", "Delay", "Undelivered");
+
+
 
     /**
      * number : 1521511225280
@@ -45,7 +49,7 @@ public class OrderBill implements Serializable, Cloneable {
      * dispatchCount : 3
      * exception : null
      * exceptionDetail : null
-     * scans : [{"place":"","date":1512030005816,"status":"Shipment Created","info":"Consignment Manifested"},{"place":"International Fulfillment Center","date":1512088740000,"info":"Check In Scan","status":"Check In Scan"},{"place":"International Fulfillment Center","date":1512092580000,"info":"Package Dispatched","status":"Outward Scan"},{"place":"Mumbai_Chndivli_PC (Maharashtra)","date":1512601765000,"info":"Shipment Picked Up from Client Location","status":"Connected to Last Mile Courier"},{"place":"Mumbai_Chndivli_PC (Maharashtra)","date":1512611198585,"info":"Shipment Recieved at Origin Center","status":"In Transit"},{"place":"Mumbai Hub (Maharashtra)","date":1512629878757,"info":"Consignment received","status":"In Transit"},{"place":"Mumbai Hub (Maharashtra)","date":1512683097957,"info":"Consignment dispatched from origin city","status":"In Transit"},{"place":"Ranchi_Hub (Jharkhand)","date":1512730292565,"info":"Consignment received at destination city","status":"Reached Destination City"},{"place":"Ranchi_2 (Jharkhand)","date":1512782328126,"info":"Received at destination city","status":"Reached Destination City"},{"place":"Ranchi_2 (Jharkhand)","date":1512784747668,"info":"Out for delivery","status":"Out For Delivery"},{"place":"Ranchi_2 (Jharkhand)","date":1512796357002,"info":"Bad/Incomplete Address","status":"Address/Contact Issue"},{"place":"Ranchi_2 (Jharkhand)","date":1512964634264,"info":"Out for delivery","status":"Out For Delivery"},{"place":"Ranchi_2 (Jharkhand)","date":1512978104002,"info":"Bad/Incomplete Address","status":"Address/Contact Issue"},{"place":"Ranchi_2 (Jharkhand)","date":1513043593714,"info":"Out for delivery","status":"Out For Delivery"},{"place":"Ranchi_2 (Jharkhand)","date":1513070409002,"info":"Customer Cancelled the order","status":"Refuse"},{"place":"Ranchi_2 (Jharkhand)","date":1513177654259,"info":"No client instructions to Reattempt","status":"Returned"},{"place":"Ranchi_Hub (Jharkhand)","date":1513227511175,"info":"Consignment received","status":"Returned In Transit"},{"place":"Ranchi_Hub (Jharkhand)","date":1513262994775,"info":"Consignment dispatched from destination city","status":"Returned In Transit"},{"place":"Gurgaon_Bilaspur_HB (Haryana)","date":1513400868642,"info":"Consignment received","status":"Returned In Transit"},{"place":"Delhi_Gateway_HB (Delhi)","date":1513414668988,"info":"Consignment received","status":"Returned In Transit"},{"place":"Gurgaon_Bilaspur_HB (Haryana)","date":1513456295829,"info":"Consignment received","status":"Returned In Transit"},{"place":"Bhiwandi_Mankoli_HB (Maharashtra)","date":1513580846207,"info":"Consignment received","status":"Returned In Transit"},{"place":"Mumbai Hub (Maharashtra)","date":1513599615710,"info":"Consignment received at return city","status":"Returned In Transit"},{"place":"BOM_Sakinaka_RP (Maharashtra)","date":1513641663856,"info":"Consignment received at return city","status":"Returned In Transit"},{"place":"BOM_Sakinaka_RP (Maharashtra)","date":1513650718934,"info":"Dispatched for RTO","status":"Returned In Transit"},{"place":"BOM_Sakinaka_RP (Maharashtra)","date":1513684227611,"info":"RETURN Accepted","status":"Returned Delivered"}]
+     * savePoints : [{"place":"","date":1512030005816,"status":"Shipment Created","info":"Consignment Manifested"},{"place":"International Fulfillment Center","date":1512088740000,"info":"Check In Scan","status":"Check In Scan"},{"place":"International Fulfillment Center","date":1512092580000,"info":"Package Dispatched","status":"Outward Scan"},{"place":"Mumbai_Chndivli_PC (Maharashtra)","date":1512601765000,"info":"Shipment Picked Up from Client Location","status":"Connected to Last Mile Courier"},{"place":"Mumbai_Chndivli_PC (Maharashtra)","date":1512611198585,"info":"Shipment Recieved at Origin Center","status":"In Transit"},{"place":"Mumbai Hub (Maharashtra)","date":1512629878757,"info":"Consignment received","status":"In Transit"},{"place":"Mumbai Hub (Maharashtra)","date":1512683097957,"info":"Consignment dispatched from origin city","status":"In Transit"},{"place":"Ranchi_Hub (Jharkhand)","date":1512730292565,"info":"Consignment received at destination city","status":"Reached Destination City"},{"place":"Ranchi_2 (Jharkhand)","date":1512782328126,"info":"Received at destination city","status":"Reached Destination City"},{"place":"Ranchi_2 (Jharkhand)","date":1512784747668,"info":"Out for delivery","status":"Out For Delivery"},{"place":"Ranchi_2 (Jharkhand)","date":1512796357002,"info":"Bad/Incomplete Address","status":"Address/Contact Issue"},{"place":"Ranchi_2 (Jharkhand)","date":1512964634264,"info":"Out for delivery","status":"Out For Delivery"},{"place":"Ranchi_2 (Jharkhand)","date":1512978104002,"info":"Bad/Incomplete Address","status":"Address/Contact Issue"},{"place":"Ranchi_2 (Jharkhand)","date":1513043593714,"info":"Out for delivery","status":"Out For Delivery"},{"place":"Ranchi_2 (Jharkhand)","date":1513070409002,"info":"Customer Cancelled the order","status":"Refuse"},{"place":"Ranchi_2 (Jharkhand)","date":1513177654259,"info":"No client instructions to Reattempt","status":"Returned"},{"place":"Ranchi_Hub (Jharkhand)","date":1513227511175,"info":"Consignment received","status":"Returned In Transit"},{"place":"Ranchi_Hub (Jharkhand)","date":1513262994775,"info":"Consignment dispatched from destination city","status":"Returned In Transit"},{"place":"Gurgaon_Bilaspur_HB (Haryana)","date":1513400868642,"info":"Consignment received","status":"Returned In Transit"},{"place":"Delhi_Gateway_HB (Delhi)","date":1513414668988,"info":"Consignment received","status":"Returned In Transit"},{"place":"Gurgaon_Bilaspur_HB (Haryana)","date":1513456295829,"info":"Consignment received","status":"Returned In Transit"},{"place":"Bhiwandi_Mankoli_HB (Maharashtra)","date":1513580846207,"info":"Consignment received","status":"Returned In Transit"},{"place":"Mumbai Hub (Maharashtra)","date":1513599615710,"info":"Consignment received at return city","status":"Returned In Transit"},{"place":"BOM_Sakinaka_RP (Maharashtra)","date":1513641663856,"info":"Consignment received at return city","status":"Returned In Transit"},{"place":"BOM_Sakinaka_RP (Maharashtra)","date":1513650718934,"info":"Dispatched for RTO","status":"Returned In Transit"},{"place":"BOM_Sakinaka_RP (Maharashtra)","date":1513684227611,"info":"RETURN Accepted","status":"Returned Delivered"}]
      */
 
     @Id
@@ -70,11 +74,15 @@ public class OrderBill implements Serializable, Cloneable {
 
     private boolean exception;
     private String exceptionDetail;
-    private List<InfoNode> scans = new ArrayList<>();
+    private Long latestDate;
+    private String latestInfo;
+    private String latestPlace;
+    private String latestStatus;
+    private List<SavePoint> savePoints = new ArrayList<>();
 
 
-    public static OrderBill error(String number) {
-        OrderBill body = new OrderBill();
+    public static Waybill error(String number) {
+        Waybill body = new Waybill();
         body.setNumber(number);
         return body;
     }
@@ -84,32 +92,35 @@ public class OrderBill implements Serializable, Cloneable {
      *
      * @param body 被拼接的单号
      */
-    public void joinInfoNode(OrderBill body) {
-        if (!ObjectUtils.isEmpty(body) && !CollectionUtils.isEmpty(body.getScans())) {
-            scans.addAll(body.getScans());
+    public void joinInfoNode(Waybill body) {
+        if (!ObjectUtils.isEmpty(body) && !CollectionUtils.isEmpty(body.getSavePoints())) {
+            savePoints.addAll(body.getSavePoints());
             setHeadCompany("CNI");
         }
-        scans = scans.stream()
+        savePoints = savePoints.stream()
                 // 选择日期非空的
                 .filter(i -> !ObjectUtils.isEmpty(i.getDate()))
                 // 选择信息或地点非空
                 .filter(i -> (!ObjectUtils.isEmpty(i.getInfo()) || !ObjectUtils.isEmpty(i.getPlace())))
                 //按照日期降序
-                .sorted(Comparator.comparingLong(InfoNode::getDate).reversed())
+                .sorted(Comparator.comparingLong(SavePoint::getDate).reversed())
                 .collect(Collectors.toList());
         // 去除入库节点前的地点信息
-        int index = findCheckInScanIdx(scans);
+        int index = findCheckInScanIdx(savePoints);
         if (index > -1)
-            scans.stream()
+            savePoints.stream()
                     .skip(index + 1)
                     .forEach(scan -> scan.setPlace(""));
 
-        InfoNode latestNode = scans.get(0);
-        if (excetions.contains(latestNode.getStatus())) {
+        SavePoint latest = savePoints.get(0);
+        if (EXCEPTIONS.contains(latest.getStatus())) {
             exception = true;
-            exceptionDetail = latestNode.getInfo();
+            exceptionDetail = latest.getInfo();
         }
-
+        latestDate=latest.getDate();
+        latestInfo=latest.getInfo();
+        latestPlace=latest.getPlace();
+        latestStatus=latest.getStatus();
     }
 
     /**
@@ -118,7 +129,7 @@ public class OrderBill implements Serializable, Cloneable {
      *
      * @return 返回索引位置找不到返回-1
      */
-    private int findCheckInScanIdx(List<InfoNode> scans) {
+    private int findCheckInScanIdx(List<SavePoint> scans) {
         for (int i = scans.size() - 1; i > -1; i--) {
             String status = scans.get(i).status;
             if (!StringUtils.isEmpty(status) && status.equalsIgnoreCase("Check In Scan"))
@@ -149,7 +160,7 @@ public class OrderBill implements Serializable, Cloneable {
                 ", dispatchCount=" + dispatchCount +
                 ", exception=" + exception +
                 ", exceptionDetail='" + exceptionDetail + '\'' +
-                ", scans=" + scans +
+                ", savePoints=" + savePoints +
                 '}';
     }
 
@@ -183,6 +194,38 @@ public class OrderBill implements Serializable, Cloneable {
 
     public void setEstimatedDate(Long estimatedDate) {
         this.estimatedDate = estimatedDate;
+    }
+
+    public Long getLatestDate() {
+        return latestDate;
+    }
+
+    public void setLatestDate(Long latestDate) {
+        this.latestDate = latestDate;
+    }
+
+    public String getLatestInfo() {
+        return latestInfo;
+    }
+
+    public void setLatestInfo(String latestInfo) {
+        this.latestInfo = latestInfo;
+    }
+
+    public String getLatestPlace() {
+        return latestPlace;
+    }
+
+    public void setLatestPlace(String latestPlace) {
+        this.latestPlace = latestPlace;
+    }
+
+    public String getLatestStatus() {
+        return latestStatus;
+    }
+
+    public void setLatestStatus(String latestStatus) {
+        this.latestStatus = latestStatus;
     }
 
     public String getCustomer() {
@@ -305,29 +348,15 @@ public class OrderBill implements Serializable, Cloneable {
         this.exceptionDetail = exceptionDetail;
     }
 
-    public List<InfoNode> getScans() {
-        return scans;
+    public List<SavePoint> getSavePoints() {
+        return savePoints;
     }
 
-    public void setScans(List<InfoNode> scans) {
-        this.scans = scans;
+    public void setSavePoints(List<SavePoint> savePoints) {
+        this.savePoints = savePoints;
     }
 
-    @Override
-    public Object clone() throws CloneNotSupportedException {
-        return super.clone();
-    }
-
-    /**
-     * 要Redis缓存所以需要 implements Serializable
-     */
-    public static class InfoNode implements Serializable, Cloneable {
-        /**
-         * place :
-         * date : 1512030005816
-         * status : Shipment Created
-         * info : Consignment Manifested
-         */
+    public static class SavePoint implements Serializable {
 
         private String place;
         private Long date;
@@ -368,17 +397,12 @@ public class OrderBill implements Serializable, Cloneable {
 
         @Override
         public String toString() {
-            return "InfoNode{" +
+            return "SavePoint{" +
                     "place='" + place + '\'' +
                     ", date=" + date +
                     ", status='" + status + '\'' +
                     ", info='" + info + '\'' +
                     '}';
-        }
-
-        @Override
-        public Object clone() throws CloneNotSupportedException {
-            return super.clone();
         }
     }
 }

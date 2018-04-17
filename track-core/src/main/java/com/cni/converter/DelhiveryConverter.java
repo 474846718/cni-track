@@ -4,7 +4,7 @@ import com.cni.converter.support.ConvertUtils;
 import com.cni.converter.support.InfoNodeAdpt;
 import com.cni.converter.support.MappingFinder;
 import com.cni.converter.support.OrderBillAdpt;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.httptrack.resp.DelhiveryResponseBody;
@@ -84,7 +84,7 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
     }
 
     @Override
-    public OrderBill convert(DelhiveryResponseBody in) throws OrderNotFoundException, ConvertException {
+    public Waybill convert(DelhiveryResponseBody in) throws OrderNotFoundException, ConvertException {
         if (in == null || !in.isSuccess() || in.getInfo() == null || in.getInfo().getData() == null)
             throw new OrderNotFoundException("查无此单" + in);
         return handleBody(in.getInfo().getData().get(0));
@@ -95,12 +95,12 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
 
     }
 
-    private OrderBill handleBody(DelhiveryResponseBody.InfoBean.DataBean dataBean) {
+    private Waybill handleBody(DelhiveryResponseBody.InfoBean.DataBean dataBean) {
         if (CollectionUtils.isEmpty(dataBean.getScans()))
             throw new OrderNotFoundException("查无此单");
 
         try {
-            OrderBill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
 
                 @Override
                 public String getNumber() {
@@ -182,7 +182,7 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
                     return dataBean.getDispatchCount();
                 }
             });
-            List<OrderBill.InfoNode> myInfoNodes = dataBean.getScans().stream()
+            List<Waybill.SavePoint> mySavePoints = dataBean.getScans().stream()
                     .map(scansBean -> {
                         MapResult result = finder.findMapping(scansBean.getInstructions(), body.getFlow(), scansBean.getStatus());
                         if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null; //TODO 检查
@@ -209,9 +209,9 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
                         });
                     })
                     .filter(Objects::nonNull)
-                    .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
+                    .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setScans(myInfoNodes);
+            body.setSavePoints(mySavePoints);
             return body;
         } catch (Exception e) {
             throw new ConvertException("del运单转换失败", e);

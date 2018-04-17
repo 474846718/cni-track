@@ -5,7 +5,7 @@ import com.cni.converter.support.ConvertUtils;
 import com.cni.converter.support.InfoNodeAdpt;
 import com.cni.converter.support.MappingFinder;
 import com.cni.converter.support.OrderBillAdpt;
-import com.cni.dao.entity.OrderBill;
+import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.httptrack.resp.EcomResponseBody;
@@ -61,7 +61,7 @@ public class EcomConverter implements Converter<EcomResponseBody> {
     }
 
     @Override
-    public OrderBill convert(EcomResponseBody in) throws OrderNotFoundException, ConvertException {
+    public Waybill convert(EcomResponseBody in) throws OrderNotFoundException, ConvertException {
         if (in == null || !in.isSuccess() || in.getInfo() == null
                 || CollectionUtils.isEmpty(in.getInfo().getList())) {
             throw new OrderNotFoundException("查无此单" + JSON.toJSONString(in));
@@ -74,9 +74,9 @@ public class EcomConverter implements Converter<EcomResponseBody> {
         this.ecomMatcher = matcher;
     }
 
-    private OrderBill handleBody(ListBean listBean) {
+    private Waybill handleBody(ListBean listBean) {
         try {
-            OrderBill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
                 @Override
                 public String getNumber() {
                     return listBean.getAwb_number() + "";
@@ -159,7 +159,7 @@ public class EcomConverter implements Converter<EcomResponseBody> {
                     return null;
                 }
             });
-            List<OrderBill.InfoNode> infoNodes = listBean.getScans().stream()
+            List<Waybill.SavePoint> savePoints = listBean.getScans().stream()
                     .map(scansBean -> {
                         MapResult result = finder.findMapping(scansBean.getStatus(), body.getFlow());
                         if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null;
@@ -190,10 +190,10 @@ public class EcomConverter implements Converter<EcomResponseBody> {
                         });
                     })
                     .filter(Objects::nonNull)
-                    .sorted(Comparator.comparingLong(OrderBill.InfoNode::getDate).reversed())
+                    .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                     .collect(Collectors.toList());
 
-            body.setScans(infoNodes);
+            body.setSavePoints(savePoints);
             return body;
         } catch (Exception e) {
             throw new ConvertException("ecom运单转换异常", e);
