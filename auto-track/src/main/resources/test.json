@@ -1,0 +1,76 @@
+{
+  "archiveTime": 1523598231685,
+  "completedTime": 1523598231685,
+  "destination": "Mumbai",
+  "dispatchCount": 1,
+  "estimatedDate": 1517587145000,
+  "exception": false,
+  "flow": "FORWARD",
+  "flowDirection": "ONWARD",
+  "headCompany": "CNI",
+  "infoNodes": [
+    {
+      "date": 1517558564000,
+      "info": "Delivered to consignee",
+      "place": "Mumbai Tardeo (Maharashtra)",
+      "status": "Delivered"
+    },
+    {
+      "date": 1517537963000,
+      "info": "Out for delivery",
+      "place": "Mumbai Tardeo (Maharashtra)",
+      "status": "Out For Delivery"
+    },
+    {
+      "date": 1517476934000,
+      "info": "Received at destination city",
+      "place": "Mumbai Tardeo (Maharashtra)",
+      "status": "Reached Destination City"
+    },
+    {
+      "date": 1517458687000,
+      "info": "Shipment received",
+      "place": "Mumbai_CottonGreen_DPC (Maharashtra)",
+      "status": "In Transit"
+    },
+    {
+      "date": 1517436553000,
+      "info": "Shipment received",
+      "place": "Mumbai Hub (Maharashtra)",
+      "status": "In Transit"
+    },
+    {
+      "date": 1517431104000,
+      "info": "Shipment Recieved at Process Center",
+      "place": "Mumbai_Chndivli_PC (Maharashtra)",
+      "status": "In Transit"
+    },
+    {
+      "date": 1517429643000,
+      "info": "Shipment Processed",
+      "place": "Mumbai_Chndivli_PC (Maharashtra)",
+      "status": "Connected to Last Mile Courier"
+    },
+    {
+      "date": 1517290740000,
+      "info": "Shipment Dispatched",
+      "place": "International Sorting Center",
+      "status": "Outward Scan"
+    },
+    {
+      "date": 1517270820000,
+      "info": "Check In Scan",
+      "place": "International Sorting Center",
+      "status": "Check In Scan"
+    },
+    {
+      "date": 1517204433000,
+      "info": "Shipment Created",
+      "place": "",
+      "status": "Shipment Created"
+    }
+  ],
+  "number": "1521513788282",
+  "packageType": "COD",
+  "tailCompany": "DELHIVERY"
+}

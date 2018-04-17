@@ -7,24 +7,29 @@ import com.cni.converter.NeomanConverter2;
 import com.cni.converter.support.NeomanJoint;
 import com.cni.dao.CompleteWaybillRepository;
 import com.cni.dao.OntrackWaybillRepository;
-import com.cni.dao.OrderBillDao;
+import com.cni.dao.entity.CompleteWaybill;
 import com.cni.dao.entity.OntrackWaybill;
 import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
-import com.cni.exception.NeomanException;
 import com.cni.exception.OrderNotFoundException;
 import com.cni.httptrack.resp.NeomanResponseBody;
 import com.cni.matcher.Matchers;
 import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.client.AsyncClientHttpRequest;
+import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StreamUtils;
+import org.springframework.util.concurrent.ListenableFuture;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -38,9 +43,8 @@ import java.util.stream.Collectors;
  * 使用渠道类进行追踪
  * 提供redis缓存和mongodb持久化功能
  */
-@Component
-public class OrderTracker {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OrderTracker.class);
+public class WaybillTracker {
+    private static final Logger log = LoggerFactory.getLogger(WaybillTracker.class);
 
     private NeomanJoint neomanJoint;
     private OkHttpClient client;
@@ -49,11 +53,26 @@ public class OrderTracker {
     private int port;
     private String version;
     private HttpUrl baseUrl;
-    private CompleteWaybillRepository completeWaybillRepository;
     private OntrackWaybillRepository ontrackWaybillRepository;
+    private CompleteWaybillRepository completeWaybillRepository;
     private SelfDispatchNumHolder selfDispatchNumHolder;
     private Matchers matchers;
 
+    public OntrackWaybillRepository getOntrackWaybillRepository() {
+        return ontrackWaybillRepository;
+    }
+
+    public void setOntrackWaybillRepository(OntrackWaybillRepository ontrackWaybillRepository) {
+        this.ontrackWaybillRepository = ontrackWaybillRepository;
+    }
+
+    public CompleteWaybillRepository getCompleteWaybillRepository() {
+        return completeWaybillRepository;
+    }
+
+    public void setCompleteWaybillRepository(CompleteWaybillRepository completeWaybillRepository) {
+        this.completeWaybillRepository = completeWaybillRepository;
+    }
 
     public SelfDispatchNumHolder getSelfDispatchNumHolder() {
         return selfDispatchNumHolder;
@@ -95,22 +114,6 @@ public class OrderTracker {
         this.version = version;
     }
 
-    public CompleteWaybillRepository getCompleteWaybillRepository() {
-        return completeWaybillRepository;
-    }
-
-    public void setCompleteWaybillRepository(CompleteWaybillRepository completeWaybillRepository) {
-        this.completeWaybillRepository = completeWaybillRepository;
-    }
-
-    public OntrackWaybillRepository getOntrackWaybillRepository() {
-        return ontrackWaybillRepository;
-    }
-
-    public void setOntrackWaybillRepository(OntrackWaybillRepository ontrackWaybillRepository) {
-        this.ontrackWaybillRepository = ontrackWaybillRepository;
-    }
-
     public void setClient(OkHttpClient client) {
         this.client = client;
     }
@@ -140,49 +143,44 @@ public class OrderTracker {
         //TODO 以后可以删掉
         if (converter instanceof DelhiveryConverter && selfDispachOnDel(orderNum, queue, trackChannel))
             return;
+
         //正常处理流程
         HttpUrl rebuildUrl = baseUrl.newBuilder().addPathSegment(trackChannel.getUrlSegment()).addQueryParameter("orderNum", orderNum).build();
         Request request = new Request.Builder().url(rebuildUrl).get().build();
-        client.newCall(request).enqueue(new Callback() {
-            private
 
-
-            @Override
-            public void onFailure(Call call, IOException e) {
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) {
+        OkHttp3ClientHttpRequestFactory factory=new OkHttp3ClientHttpRequestFactory();
+        AsyncClientHttpRequest asyncClientHttpRequest =factory.createAsyncRequest(URI.create(request.toString()),HttpMethod.GET);
+        try {
+            ListenableFuture<ClientHttpResponse> future = asyncClientHttpRequest.executeAsync();
+            future.addCallback(result -> {
                 try {
-                    ResponseBody responseBody = response.body();
-                    Assert.notNull(responseBody, "返回值为空");
-                    String res = responseBody.string();
+                    String res = StreamUtils.copyToString(result.getBody(),Charset.defaultCharset());
                     Object in = JSON.parseObject(res, converter.getTypeConvertBefore());
-                    Waybill waybill = converter.convert(in);
-
-
-
+                    Waybill orderBill = converter.convert(in);
                     try {
-                        completeWaybillRepository.save(waybill);
-                        LOGGER.warn("查单成功！已存数据库：" + orderNum);
+                        saveToRepository(orderBill);
+                        log.warn("查单成功！已存数据库：" + orderNum);
                     } catch (RuntimeException ignored) {
-                        LOGGER.warn("插入Mongodb失败：" + orderNum);
+                        log.warn("插入Mongodb失败：" + orderNum);
                     }finally {
-                        queue.add(waybill);
+                        queue.add(orderBill);
                     }
                 } catch (ConvertException e) {
-                    LOGGER.warn("运单转换时出错：" + orderNum, e);
+                    log.warn("运单转换时出错：" + orderNum, e);
                 } catch (IOException e) {
-                    LOGGER.warn("读取渠道http响应体字符串失败:" + orderNum, e);
+                    log.warn("读取渠道http响应体字符串失败:" + orderNum, e);
                 } catch (OrderNotFoundException ignored) {
-                    LOGGER.warn("查无此单:" + orderNum);
+                    log.warn("查无此单:" + orderNum);
                 } catch (RuntimeException e) {
-                    LOGGER.warn("追踪时发生其他异常:" + orderNum, e);
+                    log.warn("追踪时发生其他异常:" + orderNum, e);
                 }finally {
                     queue.add(Waybill.error(orderNum));
                 }
-            }
-        });
+            }, ex -> log.warn("链接失败"));
+        } catch (IOException e) {
+            log.warn("链接失败");
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -206,76 +204,13 @@ public class OrderTracker {
     }
 
 
-    public void startTrack(List<String> orderNums) {
-        for (String num : orderNums) {
-            List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
-            if (CollectionUtils.isEmpty(matchedTrackChannels))
-                continue;
-            TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
-            startTrack(num, trackChannel);
-        }
-    }
 
-    /**
-     * 不收集结果的 查单
-     * 只存mongodb
-     *
-     * @param orderNum     运单
-     * @param trackChannel 追踪渠道
-     */
-    public void startTrack(String orderNum, TrackChannel trackChannel) {
-        Assert.notNull(client, "没有提供http客户端");
-        Converter converter = trackChannel.getConverter();
 
-        //TODO 以后可以删掉
-        if (converter instanceof DelhiveryConverter && selfDispachOnDel(orderNum, new ArrayBlockingQueue<>(1), trackChannel))
-            return;
-        //正常处理流程
-        HttpUrl rebuildUrl = baseUrl.newBuilder().addPathSegment(trackChannel.getUrlSegment()).addQueryParameter("orderNum", orderNum).build();
-        Request request = new Request.Builder().url(rebuildUrl).get().build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                LOGGER.warn("请求失败", e);
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) {
-                try {
-                    ResponseBody responseBody = response.body();
-                    Assert.notNull(responseBody, "返回值为空");
-                    String res = responseBody.string();
-                    Object in = JSON.parseObject(res, converter.getTypeConvertBefore());
-                    Waybill waybill = converter.convert(in);
-
-                    try {
-                        completeWaybillRepository.save(waybill);
-                        LOGGER.warn("查单成功！已存数据库：" + orderNum);
-                    } catch (RuntimeException ignored) {
-                        LOGGER.warn("插入Mongodb失败：" + orderNum);
-                    }
-                } catch (ConvertException e) {
-                    LOGGER.warn("运单转换时出错：" + orderNum, e);
-                } catch (IOException e) {
-                    LOGGER.warn("读取渠道http响应体字符串失败:" + orderNum, e);
-
-                } catch (OrderNotFoundException ignored) {
-                    LOGGER.warn("查无此单:" + orderNum);
-                } catch (RuntimeException e) {
-                    LOGGER.warn("追踪时发生其他异常:" + orderNum, e);
-                }
-            }
-        });
-    }
-
-    /**
-     * 指定渠道追踪一群单号
-     * 只存数据库不返回
-     *
-     * @param orderNums 单号
-     */
-    public void startTrack(List<String> orderNums, TrackChannel channel) {
-        orderNums.forEach(num -> startTrack(num, channel));
+    private void saveToRepository(Waybill waybill) {
+        if (Waybill.COMPLETE_STATUS.contains(waybill.getLatestStatus()))
+            completeWaybillRepository.save(JSON.parseObject(JSON.toJSONString(waybill), CompleteWaybill.class));
+        else
+            ontrackWaybillRepository.save(JSON.parseObject(JSON.toJSONString(waybill), OntrackWaybill.class));
     }
 
 
@@ -294,7 +229,7 @@ public class OrderTracker {
             orderNums.removeAll(list.stream()
                     .map(Waybill::getNumber)
                     .collect(Collectors.toSet()));
-            LOGGER.warn("放弃剩余" + orderNums);
+            log.warn("放弃剩余" + orderNums);
             list.addAll(orderNums.stream().map(Waybill::error).collect(Collectors.toList()));
         }
         return list;
@@ -322,7 +257,7 @@ public class OrderTracker {
         if (!isSelfDispatch)
             return false;
 
-        LOGGER.warn("自派件处理:" + orderNum);
+        log.warn("自派件处理:" + orderNum);
         //追踪delhivery自派件
         HttpUrl neoman = new HttpUrl.Builder().scheme("http").host("www.cnilink.com").port(9999)
                 .addPathSegment("v1.0.0").addPathSegment("neoman").addQueryParameter("orderNum", orderNum)
@@ -343,26 +278,29 @@ public class OrderTracker {
                     Waybill waybill = neomanConverter2.convert(neomanResponseBody);
 
                     try {
-                        orderBillDao.upsert(waybill);
-                        LOGGER.warn("查单成功！已存数据库：" + orderNum);
+                        saveToRepository(waybill);
+                        log.warn("查单成功！已存数据库：" + orderNum);
                     } catch (RuntimeException ignored) {
-                        LOGGER.warn("插入Mongodb失败：" + orderNum);
-                    }finally {
+                        log.warn("插入Mongodb失败：" + orderNum);
+                    } finally {
                         queue.add(waybill);
                     }
                 } catch (ConvertException e) {
-                    LOGGER.warn("运单转换时出错：" + orderNum, e);
+                    log.warn("运单转换时出错：" + orderNum, e);
+
                 } catch (IOException e) {
-                    LOGGER.warn("读取渠道http响应体字符串失败:" + orderNum, e);
+                    log.warn("读取渠道http响应体字符串失败:" + orderNum, e);
+
                 } catch (OrderNotFoundException ignored) {
-                    LOGGER.warn("查无此单:" + orderNum);
+                    log.warn("查无此单:" + orderNum);
                 } catch (RuntimeException e) {
-                    LOGGER.warn("追踪时发生其他异常:" + orderNum, e);
-                }finally {
+                    log.warn("追踪时发生其他异常:" + orderNum, e);
+                } finally {
                     queue.add(Waybill.error(orderNum));
                 }
             }
         });
+
         return true;
     }
 }

@@ -1,7 +1,7 @@
 package com.cni;
 
 import com.cni.dao.entity.Waybill;
-import com.cni.httptrack.OrderTracker;
+import com.cni.httptrack.WaybillTracker;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -19,14 +19,14 @@ public class WebTrackApplicationTests {
     private static final Logger LOGGER = LoggerFactory.getLogger(WebTrackApplicationTests.class);
 
     @Autowired
-    private OrderTracker orderTracker;
+    private WaybillTracker waybillTracker;
 
     @Test
     public void contextLoads() {
         List<String> num = new ArrayList<>();
 
         num.add("1521513493906");
-        List<Waybill> waybills = orderTracker.startTrackRet(num);
+        List<Waybill> waybills = waybillTracker.startTrackRet(num);
         LOGGER.warn("");
     }
 

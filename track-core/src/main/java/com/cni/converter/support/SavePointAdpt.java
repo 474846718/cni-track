@@ -1,7 +1,7 @@
 package com.cni.converter.support;
 
 
-public interface InfoNodeAdpt {
+public interface SavePointAdpt {
 
     String getPlace();
 

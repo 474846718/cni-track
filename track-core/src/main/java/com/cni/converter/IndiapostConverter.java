@@ -1,9 +1,9 @@
 package com.cni.converter;
 
 import com.cni.converter.support.ConvertUtils;
-import com.cni.converter.support.InfoNodeAdpt;
+import com.cni.converter.support.SavePointAdpt;
 import com.cni.converter.support.MappingFinder;
-import com.cni.converter.support.OrderBillAdpt;
+import com.cni.converter.support.WaybillAdpt;
 import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
@@ -74,7 +74,7 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
     private Waybill handleBody(IndiapostResponseBody in) {
         try {
             IndiapostResponseBody.InfoBean infoBean = in.getInfo();
-            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new WaybillAdpt() {
 
                 @Override
                 public String getNumber() {
@@ -161,7 +161,7 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
                     .map(detailsBean -> {
                         MapResult result = finder.findMapping(detailsBean.getEvent(), body.getFlow());
                         if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null;
-                        return ConvertUtils.createInfoNode(new InfoNodeAdpt() {
+                        return ConvertUtils.createInfoNode(new SavePointAdpt() {
                             @Override
                             public String getPlace() {
                                 return detailsBean.getOffice();
@@ -186,7 +186,7 @@ public class IndiapostConverter implements Converter<IndiapostResponseBody> {
                     .filter(Objects::nonNull)
                     .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setSavePoints(mySavePoints);
+            body.setScans(mySavePoints);
             return body;
         } catch (Exception e) {
             throw new ConvertException("ind运单转换失败", e);

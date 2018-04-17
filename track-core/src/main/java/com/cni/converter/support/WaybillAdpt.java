@@ -4,7 +4,7 @@ package com.cni.converter.support;
 /**
  * TrackOrder的适配器接口
  */
-public interface OrderBillAdpt {
+public interface WaybillAdpt {
 
     String getNumber();
 

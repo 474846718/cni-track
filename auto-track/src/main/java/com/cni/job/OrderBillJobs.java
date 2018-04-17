@@ -1,11 +1,15 @@
 package com.cni.job;
 
 
-import com.cni.dao.OrderBillDao;
-import com.cni.dao.entity.Waybill;
+import com.alibaba.fastjson.JSON;
+import com.cni.dao.ArchiveWaybillDao;
+import com.cni.dao.CompleteWaybillRepository;
+import com.cni.dao.OntrackWaybillRepository;
 import com.cni.dao.entity.ArchiveWaybill;
-import com.cni.dao.OverOrderBillDao;
-import com.cni.httptrack.OrderTracker;
+import com.cni.dao.entity.CompleteWaybill;
+import com.cni.dao.entity.OntrackWaybill;
+import com.cni.dao.entity.Waybill;
+import com.cni.httptrack.WaybillTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -13,8 +17,12 @@ import org.springframework.util.StreamUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -24,37 +32,45 @@ import java.util.stream.Collectors;
  * 的方法和调度器绑定
  * 这些任务和运单相关
  */
-
 public class OrderBillJobs {
     private static final Logger logger = LoggerFactory.getLogger(OrderBillJobs.class);
 
-    private OrderBillDao orderBillDao;
-    private OverOrderBillDao overOrderBillDao;
-    private OrderTracker orderTracker;
+    private CompleteWaybillRepository completeWaybillRepository;
+    private OntrackWaybillRepository ontrackWaybillRepository;
+    private ArchiveWaybillDao archiveWaybillDao;
+    private WaybillTracker waybillTracker;
     private File file;
 
-    public OrderBillDao getOrderBillDao() {
-        return orderBillDao;
+    public ArchiveWaybillDao getArchiveWaybillDao() {
+        return archiveWaybillDao;
     }
 
-    public void setOrderBillDao(OrderBillDao orderBillDao) {
-        this.orderBillDao = orderBillDao;
+    public void setArchiveWaybillDao(ArchiveWaybillDao archiveWaybillDao) {
+        this.archiveWaybillDao = archiveWaybillDao;
     }
 
-    public OverOrderBillDao getOverOrderBillDao() {
-        return overOrderBillDao;
+    public CompleteWaybillRepository getCompleteWaybillRepository() {
+        return completeWaybillRepository;
     }
 
-    public void setOverOrderBillDao(OverOrderBillDao overOrderBillDao) {
-        this.overOrderBillDao = overOrderBillDao;
+    public void setCompleteWaybillRepository(CompleteWaybillRepository completeWaybillRepository) {
+        this.completeWaybillRepository = completeWaybillRepository;
     }
 
-    public OrderTracker getOrderTracker() {
-        return orderTracker;
+    public OntrackWaybillRepository getOntrackWaybillRepository() {
+        return ontrackWaybillRepository;
     }
 
-    public void setOrderTracker(OrderTracker orderTracker) {
-        this.orderTracker = orderTracker;
+    public void setOntrackWaybillRepository(OntrackWaybillRepository ontrackWaybillRepository) {
+        this.ontrackWaybillRepository = ontrackWaybillRepository;
+    }
+
+    public WaybillTracker getWaybillTracker() {
+        return waybillTracker;
+    }
+
+    public void setWaybillTracker(WaybillTracker waybillTracker) {
+        this.waybillTracker = waybillTracker;
     }
 
     /**
@@ -63,22 +79,19 @@ public class OrderBillJobs {
      * 并且转存到归档表
      */
     public synchronized void restoreOverOrders() {
-        logger.warn("===开始归档活跃表===");
-        //获取活跃表记录
-        List<Waybill> restoreWaybills = orderBillDao.findOverOrderBill(0, 1000);
-        logger.warn("记录总数：" + restoreWaybills.size());
+        logger.warn("===开始归档完结表===");
+        Instant instant = Instant.now().plus(-1, ChronoUnit.MONTHS);
+
+        //获取完结表记录
+        List<CompleteWaybill> completeWaybills = completeWaybillRepository.findByLatestDateLessThan(instant.toEpochMilli());
+        logger.warn("记录总数：" + completeWaybills.size());
         //插入归档表记录
-        List<ArchiveWaybill> archiveWaybills = restoreWaybills.stream()
-                .map(ArchiveWaybill::new)
+        List<ArchiveWaybill> archiveWaybills = completeWaybills.stream()
+                .map(completeWaybill -> JSON.parseObject(JSON.toJSONString(completeWaybill), ArchiveWaybill.class))
                 .collect(Collectors.toList());
-
-        overOrderBillDao.upsertLatestInfoNodeDate(archiveWaybills);
-
-        //删除活跃表记录
-        List<String> restoreNums = restoreWaybills.stream()
-                .map(Waybill::getNumber)
-                .collect(Collectors.toList());
-        orderBillDao.removeOrderBill(restoreNums);
+        archiveWaybillDao.upsertLatestInfoNodeDate(archiveWaybills);
+        //删除完成表记录
+        completeWaybillRepository.delete(completeWaybills);
         logger.warn("===结束归档活跃表===");
     }
 
@@ -88,14 +101,15 @@ public class OrderBillJobs {
      */
     public synchronized void checkExpiredOrders() throws IOException {
         logger.warn("===开始检查超时运单===");
-        List<String> expired = orderBillDao.findExpirdOrderBill();
+        Instant instant = Instant.now().plus(-5, ChronoUnit.DAYS);
+
+        List<OntrackWaybill> expired = ontrackWaybillRepository.findByLatestDateLessThan(instant.toEpochMilli());
         if (Objects.nonNull(file)) {
             String mergeStr = StringUtils.collectionToDelimitedString(expired, "\n");
             StreamUtils.copy(mergeStr, Charset.defaultCharset(), new FileOutputStream(file));
         }
         logger.warn("记录总数：" + expired.size());
-        orderBillDao.removeOrderBill(expired);
-
+        ontrackWaybillRepository.delete(expired);
         logger.warn("===结束检查超时运单===");
     }
 
@@ -106,12 +120,12 @@ public class OrderBillJobs {
     public synchronized void autoTrackOrders() {
         //获取实体对象 分组
         logger.warn("===开始查询活跃表未完成运单===");
-        List<Waybill> waybills = orderBillDao.findAllOnTrack();
-        logger.warn("记录总数：" + waybills.size());
-        List<String> orderNums = waybills.stream()
+        List<OntrackWaybill> ontrackWaybills = ontrackWaybillRepository.findAll();//todo 查找所有非空
+        logger.warn("记录总数：" + ontrackWaybills.size());
+        List<String> orderNums = ontrackWaybills.stream()
                 .map(Waybill::getNumber)
                 .collect(Collectors.toList());
-        orderTracker.startTrack(orderNums);
+        waybillTracker.startTrack(orderNums);
         logger.warn("===结束查询活跃表未完成运单===");
     }
 

@@ -1,13 +1,12 @@
 package com.cni;
 
 import com.cni.dao.OrderBillDao;
-import com.cni.httptrack.OrderTracker;
+import com.cni.httptrack.WaybillTracker;
 import com.cni.job.OrderBillJobs;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.mongodb.repository.Query;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.ArrayList;
@@ -22,7 +21,7 @@ public class AutoTrackApplicationTests {
     private OrderBillDao orderBillDao;
 
     @Autowired
-    private OrderTracker orderTracker;
+    private WaybillTracker waybillTracker;
 
     @Autowired
     private OrderBillJobs orderBillJobs;
@@ -30,7 +29,6 @@ public class AutoTrackApplicationTests {
     @Test
     public void contextLoads() throws InterruptedException {
         orderBillJobs.restoreOverOrders();
-        orderBillJobs.checkExpiredOrders();
         orderBillJobs.autoTrackOrders();
         Thread.sleep(1000000);
     }
@@ -39,7 +37,7 @@ public class AutoTrackApplicationTests {
     public void test() {
         List<String> list = new ArrayList<>();
         list.add("EQ949068728IN");
-        orderTracker.startTrack(list);
+        waybillTracker.startTrack(list);
     }
 
 }

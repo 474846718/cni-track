@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Repository
-public class OrderBillDao {
+public class OrderBillDaoImpl {
 
     public static final String DELIVERED_COLLECTION = "deliveredOrderBill";
     public static final String ORDERBILL = "orderBill";
@@ -34,9 +34,10 @@ public class OrderBillDao {
 
 
     @Autowired
-    public OrderBillDao(MongoTemplate mongoTemplate) {
+    public OrderBillDaoImpl(MongoTemplate mongoTemplate) {
         this.mongoTemplate = mongoTemplate;
     }
+
 
     public void upsert(Waybill waybill) {
         Query query = new Query(Criteria.where("_id").is(waybill.getNumber()));
@@ -48,10 +49,13 @@ public class OrderBillDao {
         }
     }
 
+
     public List<Waybill> findById(List<String> ids) {
         Criteria criteria = Criteria.where("_id").in(ids);
         Query query = new Query(criteria);
-        return mongoTemplate.find(query, Waybill.class);
+        List<Waybill> waybills = mongoTemplate.find(query, Waybill.class);
+        waybills.addAll(mongoTemplate.find(query, Waybill.class, DELIVERED_COLLECTION));
+        return waybills;
     }
 
 
@@ -61,6 +65,7 @@ public class OrderBillDao {
      *
      * @return 实体对象
      */
+
     public List<Waybill> findAllOnTrack() {
         BasicDBObject fieldsObject = new BasicDBObject();
         fieldsObject.append("_id", true);
@@ -83,17 +88,18 @@ public class OrderBillDao {
                 .toInstant()
                 .toEpochMilli();
 
-        Criteria criteria = Criteria.where("scans.0.status").in(ACCOMPLISH_STATE)
-                .and("scans.0.date").lte(longTimeStamp);
+        Criteria criteria = Criteria.where("scans.0.status").in(ACCOMPLISH_STATE);
+//                .and("scans.0.date").lte(longTimeStamp);
 
         Query query = new Query(criteria);
         query.skip(page * pagesize).limit(pagesize);
-        return mongoTemplate.find(query, Waybill.class, DELIVERED_COLLECTION);
+        return mongoTemplate.find(query, Waybill.class, ORDERBILL);
     }
 
     /**
      * @param orderNums 删除所有单号
      */
+
     public void removeOrderBill(List<String> orderNums) {
         Query query = new Query(Criteria.where("_id").in(orderNums));
         mongoTemplate.remove(query, Waybill.class);
@@ -103,6 +109,7 @@ public class OrderBillDao {
     /**
      * 查找超时运单号
      */
+
     public List<String> findExpirdOrderBill() {
         LocalDateTime deadLine = LocalDateTime.now().plusDays(-longTimeNoUpdateOver);
         Long longTimeStamp = deadLine.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
@@ -111,15 +118,25 @@ public class OrderBillDao {
 
         //只返回指定字段
         BasicQuery basicQuery = new BasicQuery(new BasicDBObject(), fieldsObject);
-        Criteria criteria = Criteria.where("scans.0.status").
-                nin(ACCOMPLISH_STATE).
-                and("scans.0.date").
-                lte(longTimeStamp);
+        Criteria criteria = Criteria.where("scans.0.status")
+                .nin(ACCOMPLISH_STATE)
+                .and("scans.0.date")
+                .lte(longTimeStamp);
         basicQuery.addCriteria(criteria);
 
         List<Waybill> waybills = mongoTemplate.find(basicQuery, Waybill.class);
         return waybills.stream()
                 .map(Waybill::getNumber)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 统计完结表
+     *
+     * @return
+     */
+
+    public long count() {
+        return mongoTemplate.count(new Query(), ORDERBILL);
     }
 }

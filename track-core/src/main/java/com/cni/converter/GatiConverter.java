@@ -2,9 +2,9 @@ package com.cni.converter;
 
 import com.alibaba.fastjson.JSON;
 import com.cni.converter.support.ConvertUtils;
-import com.cni.converter.support.InfoNodeAdpt;
+import com.cni.converter.support.SavePointAdpt;
 import com.cni.converter.support.MappingFinder;
-import com.cni.converter.support.OrderBillAdpt;
+import com.cni.converter.support.WaybillAdpt;
 import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
@@ -71,7 +71,7 @@ public class GatiConverter implements Converter<GatiResponseBody> {
 
     private Waybill handleBody(ListBean listBean) {
         try {
-            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new WaybillAdpt() {
                 @Override
                 public String getNumber() {
                     return listBean.getTrackNumber();
@@ -152,11 +152,13 @@ public class GatiConverter implements Converter<GatiResponseBody> {
                     return null;
                 }
             });
+
             List<Waybill.SavePoint> savePoints = listBean.getData().getTrackData().stream()
                     .map(trackDataBean -> {
                         MapResult result = finder.findMapping(trackDataBean.getInfo(), body.getFlow());
-                        if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null;
-                        return ConvertUtils.createInfoNode(new InfoNodeAdpt() {
+                        if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus()))
+                            return null;
+                        return ConvertUtils.createInfoNode(new SavePointAdpt() {
                             @Override
                             public String getPlace() {
                                 return trackDataBean.getPlace();

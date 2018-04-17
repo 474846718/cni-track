@@ -2,9 +2,9 @@ package com.cni.converter;
 
 
 import com.cni.converter.support.ConvertUtils;
-import com.cni.converter.support.InfoNodeAdpt;
+import com.cni.converter.support.SavePointAdpt;
 import com.cni.converter.support.MappingFinder;
-import com.cni.converter.support.OrderBillAdpt;
+import com.cni.converter.support.WaybillAdpt;
 import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
@@ -97,7 +97,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
             boolean isback = !StringUtils.isEmpty(refAwb);//通过识别相关单号判断是否是返程
             //TODO 拼接body
 
-            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new WaybillAdpt() {
 
                 @Override
                 public String getNumber() {
@@ -195,7 +195,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
                 scanDetailBeanList = secondBean.getScans().getScanDetail();
                 result.addAll(convertScanBean(scanDetailBeanList, body.getFlow(), true));
             }
-            body.setSavePoints(result);
+            body.setScans(result);
             return body;
         } catch (Exception e) {
             throw new ConvertException("bd运单转换失败！", e);
@@ -210,7 +210,7 @@ public class BluedartConverter implements Converter<BluedartResponseBody> {
                 .map(scanDetailBean -> {
                     MapResult result = finder.findMapping(scanDetailBean.getScan(), flow, isback);
                     if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null;
-                    return ConvertUtils.createInfoNode(new InfoNodeAdpt() {
+                    return ConvertUtils.createInfoNode(new SavePointAdpt() {
                         @Override
                         public String getPlace() {
                             return scanDetailBean.getScannedLocation();

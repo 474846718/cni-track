@@ -1,8 +1,11 @@
 package com.cni.service;
 
-import com.cni.dao.OrderBillDao;
+import com.cni.dao.CompleteWaybillRepository;
+import com.cni.dao.OntrackWaybillRepository;
+import com.cni.dao.entity.CompleteWaybill;
+import com.cni.dao.entity.OntrackWaybill;
 import com.cni.dao.entity.Waybill;
-import com.cni.httptrack.OrderTracker;
+import com.cni.httptrack.WaybillTracker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,17 +27,20 @@ import java.util.stream.Collectors;
 public class TrackService {
 
     private static final Log log = LogFactory.getLog(Waybill.class);
-    private OrderTracker orderTracker;
-    private OrderBillDao orderBillDao;
+    private WaybillTracker waybillTracker;
+    private CompleteWaybillRepository completeWaybillRepository;
+    private OntrackWaybillRepository ontrackWaybillRepository;
     private RedisTemplate<String, Waybill> redisTemplate;
 
 
     @Autowired
-    public TrackService(OrderTracker orderTracker,
-                        OrderBillDao orderBillDao,
+    public TrackService(WaybillTracker waybillTracker,
+                        CompleteWaybillRepository completeWaybillRepository,
+                        OntrackWaybillRepository ontrackWaybillRepository,
                         RedisTemplate<String, Waybill> redisTemplate) {
-        this.orderTracker = orderTracker;
-        this.orderBillDao = orderBillDao;
+        this.waybillTracker = waybillTracker;
+        this.completeWaybillRepository = completeWaybillRepository;
+        this.ontrackWaybillRepository = ontrackWaybillRepository;
         this.redisTemplate = redisTemplate;
     }
 
@@ -42,6 +48,7 @@ public class TrackService {
      * 先从数据库查询
      * 查不到的就主动追踪单号
      * 合并结果返回
+     *
      * @param numbers 单号
      * @return 查询结果
      */
@@ -60,7 +67,10 @@ public class TrackService {
         if (CollectionUtils.isEmpty(numbers))
             return redisHit;
 
-        List<Waybill> mongodbHit = orderBillDao.findById(numbers);
+        List<OntrackWaybill> mongodbHit = ontrackWaybillRepository.findByNumberIn(numbers);
+        List<CompleteWaybill> mongodbHit2= completeWaybillRepository.findByNumberIn(numbers);
+
+
         List<String> mongodbHitNum = mongodbHit.stream()
                 .filter(Objects::nonNull)
                 .map(Waybill::getNumber)
@@ -72,8 +82,8 @@ public class TrackService {
             return mongodbHit;
 
 
-        List<Waybill> trackRes = orderTracker.startTrackRet(numbers);
-        List<String> trackNums=trackRes.stream()
+        List<Waybill> trackRes = waybillTracker.startTrackRet(numbers);
+        List<String> trackNums = trackRes.stream()
                 .filter(Objects::nonNull)
                 .map(Waybill::getNumber)
                 .collect(Collectors.toList());
@@ -83,5 +93,6 @@ public class TrackService {
         trackRes.forEach(track -> vp.set(track.getNumber(), track));
         return trackRes;
     }
+
 
 }

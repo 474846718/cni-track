@@ -1,9 +1,9 @@
 package com.cni.converter;
 
 import com.cni.converter.support.ConvertUtils;
-import com.cni.converter.support.InfoNodeAdpt;
+import com.cni.converter.support.SavePointAdpt;
 import com.cni.converter.support.MappingFinder;
-import com.cni.converter.support.OrderBillAdpt;
+import com.cni.converter.support.WaybillAdpt;
 import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
@@ -69,7 +69,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
 
         NeomanResponseBody.InfoBean.EmsInfoBean emsInfoBean = in.getInfo().getEmsInfo();
         List<TrackDataBean> trackDataBeans = in.getInfo().getTrackData();
-        Waybill doc = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+        Waybill doc = ConvertUtils.createOrderBill(new WaybillAdpt() {
             @Override
             public String getNumber() {
                 return emsInfoBean.getNumber();
@@ -156,7 +156,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
                     String subString = pattern.matcher(trackData.getInfo()).replaceAll("");
                     MapResult result = finder.findMapping(subString, doc.getFlow());
                     if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null;
-                    return ConvertUtils.createInfoNode(new InfoNodeAdpt() {
+                    return ConvertUtils.createInfoNode(new SavePointAdpt() {
                         @Override
                         public String getPlace() {
                             return trackData.getPlace();
@@ -187,7 +187,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
             mySavePoints.stream()
                     .skip(index + 1)
                     .forEach(scan -> scan.setPlace(""));
-        doc.setSavePoints(mySavePoints);
+        doc.setScans(mySavePoints);
         return doc;
     }
 

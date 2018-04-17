@@ -15,7 +15,7 @@ public final class ConvertUtils {
      * @param adpt
      * @return
      */
-    public static Waybill createOrderBill(OrderBillAdpt adpt) {
+    public static Waybill createOrderBill(WaybillAdpt adpt) {
         Waybill document = new Waybill();
         document.setFlowDirection(adpt.getFlowDirection());
         document.setFlow(adpt.getFlow());
@@ -43,7 +43,7 @@ public final class ConvertUtils {
      * @param adpt
      * @return
      */
-    public static Waybill.SavePoint createInfoNode(InfoNodeAdpt adpt) {
+    public static Waybill.SavePoint createInfoNode(SavePointAdpt adpt) {
         Waybill.SavePoint savePoint = new Waybill.SavePoint();
         savePoint.setPlace(adpt.getPlace());
         savePoint.setDate(adpt.getDate());

@@ -1,9 +1,9 @@
 package com.cni.converter;
 
 import com.cni.converter.support.ConvertUtils;
-import com.cni.converter.support.InfoNodeAdpt;
+import com.cni.converter.support.SavePointAdpt;
 import com.cni.converter.support.MappingFinder;
-import com.cni.converter.support.OrderBillAdpt;
+import com.cni.converter.support.WaybillAdpt;
 import com.cni.dao.entity.Waybill;
 import com.cni.exception.ConvertException;
 import com.cni.exception.OrderNotFoundException;
@@ -100,7 +100,7 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
             throw new OrderNotFoundException("查无此单");
 
         try {
-            Waybill body = ConvertUtils.createOrderBill(new OrderBillAdpt() {
+            Waybill body = ConvertUtils.createOrderBill(new WaybillAdpt() {
 
                 @Override
                 public String getNumber() {
@@ -186,7 +186,7 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
                     .map(scansBean -> {
                         MapResult result = finder.findMapping(scansBean.getInstructions(), body.getFlow(), scansBean.getStatus());
                         if (ObjectUtils.isEmpty(result) || IGNORE.equals(result.getStatus())) return null; //TODO 检查
-                        return ConvertUtils.createInfoNode(new InfoNodeAdpt() {
+                        return ConvertUtils.createInfoNode(new SavePointAdpt() {
                             @Override
                             public String getPlace() {
                                 return scansBean.getScannedLocation();
@@ -211,7 +211,7 @@ public class DelhiveryConverter implements Converter<DelhiveryResponseBody> {
                     .filter(Objects::nonNull)
                     .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                     .collect(Collectors.toList());
-            body.setSavePoints(mySavePoints);
+            body.setScans(mySavePoints);
             return body;
         } catch (Exception e) {
             throw new ConvertException("del运单转换失败", e);

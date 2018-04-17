@@ -1,8 +1,9 @@
 package com.cni.config;
 
 import com.cni.converter.*;
-import com.cni.dao.OrderBillDao;
-import com.cni.httptrack.OrderTracker;
+import com.cni.dao.CompleteWaybillRepository;
+import com.cni.dao.OntrackWaybillRepository;
+import com.cni.httptrack.WaybillTracker;
 import com.cni.httptrack.SelfDispatchNumHolder;
 import com.cni.httptrack.TrackChannel;
 import com.cni.httptrack.support.MemoryCookieJar;
@@ -14,7 +15,6 @@ import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +42,7 @@ public class DomainConfiguration {
                 .dispatcher(dispatcher)
                 .retryOnConnectionFailure(true)
                 .build();
+
     }
 
     @Bean
@@ -98,16 +99,18 @@ public class DomainConfiguration {
     }
 
     @Bean
-    public OrderTracker orderTracker(OrderBillDao orderBillDao) {
-        OrderTracker orderTracker = new OrderTracker();
-        orderTracker.setSelfDispatchNumHolder(selfDispatchNumHolder());//TODO 以后可以删除
-        orderTracker.setScheme("http");
-        orderTracker.setHost(host);
-        orderTracker.setPort(9999);
-        orderTracker.setVersion("v1.0.0");
-        orderTracker.setClient(okHttpClient());
-        orderTracker.setOrderBillDao(orderBillDao);
-        orderTracker.setMatchers(matchers());
-        return orderTracker;
+    public WaybillTracker orderTracker(OntrackWaybillRepository ontrackWaybillRepository,
+                                       CompleteWaybillRepository completeWaybillRepository) {
+        WaybillTracker waybillTracker = new WaybillTracker();
+        waybillTracker.setSelfDispatchNumHolder(selfDispatchNumHolder());//TODO 以后可以删除
+        waybillTracker.setScheme("http");
+        waybillTracker.setHost(host);
+        waybillTracker.setPort(9999);
+        waybillTracker.setVersion("v1.0.0");
+        waybillTracker.setClient(okHttpClient());
+        waybillTracker.setOntrackWaybillRepository(ontrackWaybillRepository);
+        waybillTracker.setCompleteWaybillRepository(completeWaybillRepository);
+        waybillTracker.setMatchers(matchers());
+        return waybillTracker;
     }
 }
