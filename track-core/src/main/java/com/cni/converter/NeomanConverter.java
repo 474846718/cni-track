@@ -56,7 +56,7 @@ public class NeomanConverter implements Converter<NeomanResponseBody> {
         } catch (Exception ignored) {
         }
         Waybill doc = new Waybill();
-        doc.setScans(result);
+        doc.setSavePoints(result);
         return doc;
     }
 

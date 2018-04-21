@@ -67,9 +67,17 @@ public class TrackService {
         if (CollectionUtils.isEmpty(numbers))
             return redisHit;
 
-        List<OntrackWaybill> mongodbHit = ontrackWaybillRepository.findByNumberIn(numbers);
-        List<CompleteWaybill> mongodbHit2= completeWaybillRepository.findByNumberIn(numbers);
 
+        List<OntrackWaybill> ontrackWaybills = ontrackWaybillRepository.findByNumberIn(numbers);
+        List<CompleteWaybill> completeWaybills = completeWaybillRepository.findByNumberIn(numbers);
+
+        List<Waybill> mongodbHit = ontrackWaybills.stream()
+                .map(ontrackWaybill -> (Waybill) ontrackWaybill)
+                .collect(Collectors.toList());
+
+        mongodbHit.addAll(completeWaybills.stream()
+                .map(ontrackWaybill -> (Waybill) ontrackWaybill)
+                .collect(Collectors.toList()));
 
         List<String> mongodbHitNum = mongodbHit.stream()
                 .filter(Objects::nonNull)

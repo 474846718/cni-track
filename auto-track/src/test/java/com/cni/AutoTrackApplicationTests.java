@@ -18,20 +18,9 @@ import java.util.List;
 public class AutoTrackApplicationTests {
 
     @Autowired
-    private OrderBillDao orderBillDao;
-
-    @Autowired
     private WaybillTracker waybillTracker;
 
-    @Autowired
-    private OrderBillJobs orderBillJobs;
-
-    @Test
-    public void contextLoads() throws InterruptedException {
-        orderBillJobs.restoreOverOrders();
-        orderBillJobs.autoTrackOrders();
-        Thread.sleep(1000000);
-    }
+    @
 
     @Test
     public void test() {

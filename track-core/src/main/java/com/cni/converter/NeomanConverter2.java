@@ -187,7 +187,7 @@ public class NeomanConverter2 implements Converter<NeomanResponseBody> {
             mySavePoints.stream()
                     .skip(index + 1)
                     .forEach(scan -> scan.setPlace(""));
-        doc.setScans(mySavePoints);
+        doc.setSavePoints(mySavePoints);
         return doc;
     }
 

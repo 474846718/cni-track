@@ -125,7 +125,7 @@ public class OrderBillJobs {
         List<String> orderNums = ontrackWaybills.stream()
                 .map(Waybill::getNumber)
                 .collect(Collectors.toList());
-        waybillTracker.startTrack(orderNums);
+        waybillTracker.startTrackRet(orderNums);
         logger.warn("===结束查询活跃表未完成运单===");
     }
 

@@ -19,7 +19,6 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.scheduling.quartz.SimpleTriggerFactoryBean;
 
 
-@Configuration
 public class QuartzConfiguration implements ApplicationContextAware {
 
     private OntrackWaybillRepository ontrackWaybillRepository;
@@ -87,25 +86,25 @@ public class QuartzConfiguration implements ApplicationContextAware {
         return factoryBean;
     }
 
-//    @Bean
-//    public SimpleTriggerFactoryBean simpleTriggerFactoryBean(JobDetail checkExpiredOrders) {
-//        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
-//        factoryBean.setJobDetail(checkExpiredOrders);
-//        factoryBean.setRepeatInterval(1000L * 60 * 60 * 24); //毫秒
-//        factoryBean.setPriority(50);
-//        return factoryBean;
-//    }
+    @Bean
+    public SimpleTriggerFactoryBean simpleTriggerFactoryBean(JobDetail checkExpiredOrders) {
+        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
+        factoryBean.setJobDetail(checkExpiredOrders);
+        factoryBean.setRepeatInterval(1000L * 60 * 60 * 24); //毫秒
+        factoryBean.setPriority(50);
+        return factoryBean;
+    }
 
 
-//    @Bean
-//    public SimpleTriggerFactoryBean simpleTriggerFactoryBean2(JobDetail autoTrackOrders) {
-//        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
-//        factoryBean.setJobDetail(autoTrackOrders);
-//        factoryBean.setRepeatInterval(1000L * 60 * 60); //毫秒
-//        factoryBean.setPriority(1);
-////        factoryBean.setStartDelay(1000L * 60); //1分钟后开始执行
-//        return factoryBean;
-//    }
+    @Bean
+    public SimpleTriggerFactoryBean simpleTriggerFactoryBean2(JobDetail autoTrackOrders) {
+        SimpleTriggerFactoryBean factoryBean = new SimpleTriggerFactoryBean();
+        factoryBean.setJobDetail(autoTrackOrders);
+        factoryBean.setRepeatInterval(1000L * 60 * 60); //毫秒
+        factoryBean.setPriority(1);
+//        factoryBean.setStartDelay(1000L * 60); //1分钟后开始执行
+        return factoryBean;
+    }
 
     @Bean
     public SchedulerFactoryBean schedulerFactoryBean(Trigger... triggers) {

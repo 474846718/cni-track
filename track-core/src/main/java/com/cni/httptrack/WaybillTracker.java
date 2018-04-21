@@ -134,8 +134,7 @@ public class WaybillTracker {
      * @param orderNum     单号
      * @param trackChannel 查询渠道
      */
-    public void startTrackRet(String orderNum, BlockingQueue<Waybill> queue, TrackChannel trackChannel) {
-
+    private void internelTrack(String orderNum, TrackChannel trackChannel, BlockingQueue<Waybill> queue) {
 
         Assert.notNull(client, "没有提供http客户端");
         Converter converter = trackChannel.getConverter();
@@ -145,16 +144,22 @@ public class WaybillTracker {
             return;
 
         //正常处理流程
-        HttpUrl rebuildUrl = baseUrl.newBuilder().addPathSegment(trackChannel.getUrlSegment()).addQueryParameter("orderNum", orderNum).build();
-        Request request = new Request.Builder().url(rebuildUrl).get().build();
+        HttpUrl rebuildUrl = baseUrl.newBuilder()
+                .addPathSegment(trackChannel.getUrlSegment())
+                .addQueryParameter("orderNum", orderNum)
+                .build();
+        Request request = new Request.Builder()
+                .url(rebuildUrl)
+                .get()
+                .build();
 
-        OkHttp3ClientHttpRequestFactory factory=new OkHttp3ClientHttpRequestFactory();
-        AsyncClientHttpRequest asyncClientHttpRequest =factory.createAsyncRequest(URI.create(request.toString()),HttpMethod.GET);
+        OkHttp3ClientHttpRequestFactory factory = new OkHttp3ClientHttpRequestFactory(client);
+        AsyncClientHttpRequest asyncClientHttpRequest = factory.createAsyncRequest(URI.create(request.toString()), HttpMethod.GET);
         try {
             ListenableFuture<ClientHttpResponse> future = asyncClientHttpRequest.executeAsync();
             future.addCallback(result -> {
                 try {
-                    String res = StreamUtils.copyToString(result.getBody(),Charset.defaultCharset());
+                    String res = StreamUtils.copyToString(result.getBody(), Charset.defaultCharset());
                     Object in = JSON.parseObject(res, converter.getTypeConvertBefore());
                     Waybill orderBill = converter.convert(in);
                     try {
@@ -162,8 +167,9 @@ public class WaybillTracker {
                         log.warn("查单成功！已存数据库：" + orderNum);
                     } catch (RuntimeException ignored) {
                         log.warn("插入Mongodb失败：" + orderNum);
-                    }finally {
-                        queue.add(orderBill);
+                    } finally {
+                        if (null!=queue)
+                            queue.add(orderBill);
                     }
                 } catch (ConvertException e) {
                     log.warn("运单转换时出错：" + orderNum, e);
@@ -173,8 +179,9 @@ public class WaybillTracker {
                     log.warn("查无此单:" + orderNum);
                 } catch (RuntimeException e) {
                     log.warn("追踪时发生其他异常:" + orderNum, e);
-                }finally {
-                    queue.add(Waybill.error(orderNum));
+                } finally {
+                    if (null!=queue)
+                        queue.add(Waybill.error(orderNum));
                 }
             }, ex -> log.warn("链接失败"));
         } catch (IOException e) {
@@ -197,13 +204,23 @@ public class WaybillTracker {
                 queue.add(Waybill.error(num));
             else {
                 TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
-                startTrackRet(num, queue, trackChannel);
+                internelTrack(num, trackChannel,queue);
             }
         }
         return obtainFromQueue(queue, orderNums);
     }
 
 
+    public void startTrack(List<String> orderNums) {
+
+        for (String num : orderNums) {
+            List<TrackChannel> matchedTrackChannels = matchers.matchOrderNumber(num);
+            if (!CollectionUtils.isEmpty(matchedTrackChannels)){
+                TrackChannel trackChannel = matchedTrackChannels.get(0); //TODO 处理多家匹配
+                internelTrack(num,trackChannel,null);
+            }
+        }
+    }
 
 
     private void saveToRepository(Waybill waybill) {

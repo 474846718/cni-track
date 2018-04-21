@@ -193,7 +193,7 @@ public class EcomConverter implements Converter<EcomResponseBody> {
                     .sorted(Comparator.comparingLong(Waybill.SavePoint::getDate).reversed())
                     .collect(Collectors.toList());
 
-            body.setScans(savePoints);
+            body.setSavePoints(savePoints);
             return body;
         } catch (Exception e) {
             throw new ConvertException("ecom运单转换异常", e);
